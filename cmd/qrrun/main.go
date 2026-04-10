@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -32,6 +33,9 @@ func main() {
 func newRootCmd() *cobra.Command {
 	var transportName string
 	var runtimeName string
+	var keepServing bool
+	var serveMultipleDeprecated bool
+	var exitQuietPeriod time.Duration
 
 	cmd := &cobra.Command{
 		Use:   "qrrun [flags] <script|-]",
@@ -54,10 +58,13 @@ Examples:
 	echo "print('hello')" | qrrun -`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			keepServingMode := keepServing || serveMultipleDeprecated
 			return app.Run(app.Options{
-				TransportName: transportName,
-				RuntimeName:   runtimeName,
-				ScriptPath:    args[0],
+				TransportName:   transportName,
+				RuntimeName:     runtimeName,
+				ScriptPath:      args[0],
+				KeepServing:     keepServingMode,
+				ExitQuietPeriod: exitQuietPeriod,
 			})
 		},
 		SilenceUsage: true,
@@ -70,6 +77,13 @@ Examples:
 		`Tunnel transport to use. Available: cloudflared`)
 	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
 		`Mobile runtime to target. Available: pythonista, pythonista2, pythonista3`)
+	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,
+		`Keep serving requests until interrupted. By default qrrun exits after successful delivery and a short quiet period.`)
+	cmd.Flags().DurationVar(&exitQuietPeriod, "exit-quiet-period", app.DefaultExitQuietPeriod,
+		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
+	cmd.Flags().BoolVar(&serveMultipleDeprecated, "serve-multiple", false,
+		`Deprecated alias of --keep-serving.`)
+	_ = cmd.Flags().MarkDeprecated("serve-multiple", "use --keep-serving instead")
 
 	return cmd
 }

@@ -8,8 +8,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"os"
+	"sync"
 )
 
 // Server is an in-memory single-script HTTP server.
@@ -17,15 +20,22 @@ type Server struct {
 	scriptID    string
 	scriptBytes []byte
 	contentType string
+	requestLog  io.Writer
 	listener    net.Listener
+	firstReqCh  chan struct{}
+	deliveryCh  chan struct{}
+	firstReq    sync.Once
 }
 
 // New creates a Server that serves scriptBytes on a random free port.
 // The script is exposed at /<uuid-without-extension>.
-func New(scriptBytes []byte, contentType string) (*Server, error) {
+func New(scriptBytes []byte, contentType string, requestLog io.Writer) (*Server, error) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, fmt.Errorf("server: listen: %w", err)
+	}
+	if requestLog == nil {
+		requestLog = os.Stdout
 	}
 
 	scriptID, err := newScriptID()
@@ -37,7 +47,10 @@ func New(scriptBytes []byte, contentType string) (*Server, error) {
 		scriptID:    scriptID,
 		scriptBytes: scriptBytes,
 		contentType: contentType,
+		requestLog:  requestLog,
 		listener:    ln,
+		firstReqCh:  make(chan struct{}),
+		deliveryCh:  make(chan struct{}, 32),
 	}, nil
 }
 
@@ -51,11 +64,22 @@ func (s *Server) ScriptURL() string {
 	return s.URL() + "/" + s.scriptID
 }
 
+// FirstRequestServed is closed once the script endpoint is served for the first time.
+func (s *Server) FirstRequestServed() <-chan struct{} {
+	return s.firstReqCh
+}
+
+// DeliveryEvents receives an event each time script content is successfully written.
+func (s *Server) DeliveryEvents() <-chan struct{} {
+	return s.deliveryCh
+}
+
 // Serve starts the HTTP server and blocks until ctx is cancelled or an
 // unrecoverable error occurs.
 func (s *Server) Serve(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/"+s.scriptID, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(s.requestLog, "request: method=%s path=%s remote=%s\n", r.Method, r.URL.Path, r.RemoteAddr)
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
@@ -67,7 +91,15 @@ func (s *Server) Serve(ctx context.Context) error {
 		if r.Method == http.MethodHead {
 			return
 		}
-		_, _ = w.Write(s.scriptBytes)
+		if _, err := w.Write(s.scriptBytes); err == nil {
+			s.firstReq.Do(func() {
+				close(s.firstReqCh)
+			})
+			select {
+			case s.deliveryCh <- struct{}{}:
+			default:
+			}
+		}
 	})
 
 	srv := &http.Server{Handler: mux}
