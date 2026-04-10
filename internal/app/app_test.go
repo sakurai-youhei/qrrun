@@ -32,14 +32,14 @@ func TestRun_InvalidRuntime(t *testing.T) {
 }
 
 func TestRun_InvalidScriptPath(t *testing.T) {
-	// server.New will fail if the directory doesn't exist
+	// app.Run now validates script existence before starting transport.
 	err := app.Run(app.Options{
 		TransportName: "cloudflared",
 		RuntimeName:   "pythonista3",
 		ScriptPath:    "/nonexistent/path/script.py",
 		Output:        io.Discard,
 	})
-	// server.New does not stat the file so it won't fail here;
-	// just verify transport/runtime validation passes without panic.
-	_ = err
+	if err == nil {
+		t.Fatal("expected error for invalid script path")
+	}
 }
