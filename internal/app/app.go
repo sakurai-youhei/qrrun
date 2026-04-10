@@ -50,21 +50,12 @@ func Run(opts Options) error {
 		return err
 	}
 
-	scriptPath := opts.ScriptPath
-	if opts.ScriptPath == "-" {
-		var cleanup func()
-		scriptPath, cleanup, err = materializeStdinScript(opts.Input)
-		if err != nil {
-			return err
-		}
-		defer cleanup()
+	scriptBytes, err := loadScriptContent(opts.ScriptPath, opts.Input)
+	if err != nil {
+		return err
 	}
 
-	if _, err := os.Stat(scriptPath); err != nil {
-		return fmt.Errorf("script path: %w", err)
-	}
-
-	srv, err := server.New(scriptPath)
+	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8")
 	if err != nil {
 		return err
 	}
@@ -126,26 +117,20 @@ func Run(opts Options) error {
 	return nil
 }
 
-func materializeStdinScript(input io.Reader) (string, func(), error) {
-	tmpFile, err := os.CreateTemp("", "qrrun-stdin-*.py")
+func loadScriptContent(scriptPath string, input io.Reader) ([]byte, error) {
+	if scriptPath == "-" {
+		b, err := io.ReadAll(input)
+		if err != nil {
+			return nil, fmt.Errorf("read stdin: %w", err)
+		}
+		return b, nil
+	}
+
+	b, err := os.ReadFile(scriptPath)
 	if err != nil {
-		return "", nil, fmt.Errorf("create temp script: %w", err)
+		return nil, fmt.Errorf("script path: %w", err)
 	}
-
-	if _, err := io.Copy(tmpFile, input); err != nil {
-		_ = tmpFile.Close()
-		_ = os.Remove(tmpFile.Name())
-		return "", nil, fmt.Errorf("read stdin: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		_ = os.Remove(tmpFile.Name())
-		return "", nil, fmt.Errorf("close temp script: %w", err)
-	}
-
-	cleanup := func() {
-		_ = os.Remove(tmpFile.Name())
-	}
-	return tmpFile.Name(), cleanup, nil
+	return b, nil
 }
 
 // replaceBase swaps the local base URL in rawURL with publicBase.
