@@ -7,6 +7,7 @@ import (
 	"io"
 	"os/exec"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -21,7 +22,17 @@ var tunnelURLRe = regexp.MustCompile(`https://[a-z0-9-]+\.trycloudflare\.com`)
 // resulting public URL to urlCh.  It returns when ctx is cancelled or the
 // subprocess exits unexpectedly.
 func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- string) error {
-	cmd := exec.CommandContext(ctx, "cloudflared", "tunnel", "--url", localURL)
+	args := []string{"tunnel"}
+	if strings.HasPrefix(localURL, "unix://") {
+		socketPath := strings.TrimPrefix(localURL, "unix://")
+		args = append(args, "--url", "http://localhost", "--unix-socket", socketPath)
+		fmt.Printf("transport command: cloudflared tunnel --url http://localhost --unix-socket %s\n", socketPath)
+	} else {
+		args = append(args, "--url", localURL)
+		fmt.Printf("transport command: cloudflared tunnel --url %s\n", localURL)
+	}
+
+	cmd := exec.CommandContext(ctx, "cloudflared", args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
