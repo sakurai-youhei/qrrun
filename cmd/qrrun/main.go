@@ -3,8 +3,8 @@
 //
 // Usage:
 //
-//	qrrun --transport cloudflared --runtime pythonista3 your-local-script.py
-//	echo "print('hello')" | qrrun --transport cloudflared --runtime pythonista3 -
+//	qrrun your-local-script.py
+//	echo "print('hello')" | qrrun -
 package main
 
 import (
@@ -45,10 +45,13 @@ Prerequisite:
 	cloudflared must be installed and available on PATH.
 	qrrun uses Cloudflare Quick Tunnels (trycloudflare.com),
 	so account login is not required.
+	By default, qrrun generates a QR code for opening and running your
+	script in Pythonista3 via Cloudflare Quick Tunnels, unless you
+	explicitly override "--transport" or "--runtime".
 
 Examples:
-	qrrun --transport cloudflared --runtime pythonista3 hello.py
-	echo "print('hello')" | qrrun --transport cloudflared --runtime pythonista3 -`,
+	qrrun hello.py
+	echo "print('hello')" | qrrun -`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return app.Run(app.Options{
