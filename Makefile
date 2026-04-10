@@ -1,4 +1,4 @@
-.PHONY: help gvm-setup build test lint vet clean
+.PHONY: help gvm-setup build test lint vet pre-commit-install pre-commit-run clean
 
 .DEFAULT_GOAL := build
 
@@ -39,6 +39,14 @@ lint:
 ## vet: run go vet
 vet:
 	go vet ./...
+
+## pre-commit-install: install git pre-commit hooks
+pre-commit-install:
+	pre-commit install
+
+## pre-commit-run: run all pre-commit hooks across all files
+pre-commit-run:
+	pre-commit run --all-files
 
 ## clean: remove build artifacts
 clean:
