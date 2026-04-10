@@ -21,6 +21,22 @@ echo "print('hello from stdin')" | qrrun -
 
 By default, qrrun generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
 
+By default, qrrun exits after successful content delivery and a short quiet period (`500ms`).
+
+You can tune this with `--exit-quiet-period`:
+
+```bash
+qrrun --exit-quiet-period 300ms hello.py
+```
+
+Keep serving requests until interrupted:
+
+```bash
+qrrun --keep-serving hello.py
+```
+
+Each received request is logged to the console (method/path/remote address), regardless of HTTP verb.
+
 ## Development Setup (gvm)
 
 This project uses Go `1.24.13`.

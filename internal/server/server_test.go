@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,7 +16,7 @@ import (
 
 func TestServer_ServesScriptFile(t *testing.T) {
 	content := "print('hello')\n"
-	srv, err := server.New([]byte(content), "text/x-python; charset=utf-8")
+	srv, err := server.New([]byte(content), "text/x-python; charset=utf-8", io.Discard)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -56,7 +57,7 @@ func TestServer_ServesScriptFile(t *testing.T) {
 }
 
 func TestServer_URLFormat(t *testing.T) {
-	srv, err := server.New([]byte(""), "text/x-python; charset=utf-8")
+	srv, err := server.New([]byte(""), "text/x-python; charset=utf-8", io.Discard)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -76,5 +77,123 @@ func TestServer_URLFormat(t *testing.T) {
 	}
 	if ok, _ := regexp.MatchString("^[a-f0-9]{32}$", id); !ok {
 		t.Errorf("expected 32-char lowercase hex script id, got %q", id)
+	}
+}
+
+func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", io.Discard)
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = srv.Serve(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	select {
+	case <-srv.FirstRequestServed():
+		t.Fatal("first request signal should not be closed before serving any request")
+	default:
+	}
+
+	resp, err := http.Get(srv.ScriptURL())
+	if err != nil {
+		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
+	}
+	_ = resp.Body.Close()
+
+	select {
+	case <-srv.FirstRequestServed():
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("first request signal was not closed after first request")
+	}
+}
+
+func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", io.Discard)
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = srv.Serve(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	req, err := http.NewRequest(http.MethodHead, srv.ScriptURL(), nil)
+	if err != nil {
+		t.Fatalf("create HEAD request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
+	}
+	_ = resp.Body.Close()
+
+	select {
+	case <-srv.FirstRequestServed():
+		t.Fatal("first request signal should not be closed by HEAD")
+	default:
+	}
+}
+
+func TestServer_LogsAllRequests(t *testing.T) {
+	var logs bytes.Buffer
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", &logs)
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = srv.Serve(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	if _, err := http.Get(srv.ScriptURL()); err != nil {
+		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
+	}
+
+	req, err := http.NewRequest(http.MethodHead, srv.ScriptURL(), nil)
+	if err != nil {
+		t.Fatalf("create HEAD request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
+	}
+	_ = resp.Body.Close()
+
+	req, err = http.NewRequest(http.MethodPost, srv.ScriptURL(), strings.NewReader("x"))
+	if err != nil {
+		t.Fatalf("create POST request: %v", err)
+	}
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("POST %s: %v", srv.ScriptURL(), err)
+	}
+	_ = resp.Body.Close()
+
+	got := logs.String()
+	if !strings.Contains(got, "method=GET") {
+		t.Fatalf("expected GET log, got: %q", got)
+	}
+	if !strings.Contains(got, "method=HEAD") {
+		t.Fatalf("expected HEAD log, got: %q", got)
+	}
+	if !strings.Contains(got, "method=POST") {
+		t.Fatalf("expected POST log, got: %q", got)
 	}
 }
