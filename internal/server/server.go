@@ -22,6 +22,9 @@ type Server struct {
 	contentType string
 	requestLog  io.Writer
 	listener    net.Listener
+	baseURL     string
+	originURL   string
+	cleanup     func()
 	firstReqCh  chan struct{}
 	deliveryCh  chan struct{}
 	firstReq    sync.Once
@@ -30,9 +33,9 @@ type Server struct {
 // New creates a Server that serves scriptBytes on a random free port.
 // The script is exposed at /<uuid-without-extension>.
 func New(scriptBytes []byte, contentType string, requestLog io.Writer) (*Server, error) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, baseURL, originURL, cleanup, err := newOriginListener()
 	if err != nil {
-		return nil, fmt.Errorf("server: listen: %w", err)
+		return nil, err
 	}
 	if requestLog == nil {
 		requestLog = os.Stdout
@@ -49,14 +52,22 @@ func New(scriptBytes []byte, contentType string, requestLog io.Writer) (*Server,
 		contentType: contentType,
 		requestLog:  requestLog,
 		listener:    ln,
+		baseURL:     baseURL,
+		originURL:   originURL,
+		cleanup:     cleanup,
 		firstReqCh:  make(chan struct{}),
 		deliveryCh:  make(chan struct{}, 32),
 	}, nil
 }
 
-// URL returns the base URL of this server (e.g. "http://127.0.0.1:54321").
+// URL returns the local HTTP base URL used for script URL composition.
 func (s *Server) URL() string {
-	return "http://" + s.listener.Addr().String()
+	return s.baseURL
+}
+
+// OriginURL returns the local origin URL for cloudflared.
+func (s *Server) OriginURL() string {
+	return s.originURL
 }
 
 // ScriptURL returns the full URL for the served script file.
@@ -77,6 +88,8 @@ func (s *Server) DeliveryEvents() <-chan struct{} {
 // Serve starts the HTTP server and blocks until ctx is cancelled or an
 // unrecoverable error occurs.
 func (s *Server) Serve(ctx context.Context) error {
+	defer s.cleanup()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/"+s.scriptID, func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(s.requestLog, "request: method=%s path=%s remote=%s\n", r.Method, r.URL.Path, r.RemoteAddr)
@@ -122,7 +135,6 @@ func (s *Server) Serve(ctx context.Context) error {
 		return fmt.Errorf("server: serve: %w", err)
 	}
 }
-
 func newScriptID() (string, error) {
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {

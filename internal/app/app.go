@@ -82,7 +82,7 @@ func Run(opts Options) error {
 	urlCh := make(chan string, 1)
 	transportErrCh := make(chan error, 1)
 	go func() {
-		transportErrCh <- t.Expose(ctx, srv.URL(), urlCh)
+		transportErrCh <- t.Expose(ctx, srv.OriginURL(), urlCh)
 	}()
 
 	// Wait for the public URL or an early error.

@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +36,7 @@ func TestServer_ServesScriptFile(t *testing.T) {
 	// Give the server a moment to start.
 	time.Sleep(50 * time.Millisecond)
 
-	resp, err := http.Get(srv.ScriptURL())
+	resp, err := serverHTTPClient(srv.OriginURL()).Get(srv.ScriptURL())
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -62,8 +64,20 @@ func TestServer_URLFormat(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	if !strings.HasPrefix(srv.URL(), "http://127.0.0.1:") {
-		t.Errorf("unexpected URL: %q", srv.URL())
+	if runtime.GOOS == "windows" {
+		if !strings.HasPrefix(srv.URL(), "http://127.0.0.1:") {
+			t.Errorf("unexpected URL: %q", srv.URL())
+		}
+		if !strings.HasPrefix(srv.OriginURL(), "http://127.0.0.1:") {
+			t.Errorf("unexpected OriginURL: %q", srv.OriginURL())
+		}
+	} else {
+		if srv.URL() != "http://localhost" {
+			t.Errorf("unexpected URL: %q", srv.URL())
+		}
+		if !strings.HasPrefix(srv.OriginURL(), "unix://") {
+			t.Errorf("unexpected OriginURL: %q", srv.OriginURL())
+		}
 	}
 
 	scriptURL := srv.ScriptURL()
@@ -101,7 +115,7 @@ func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
 	default:
 	}
 
-	resp, err := http.Get(srv.ScriptURL())
+	resp, err := serverHTTPClient(srv.OriginURL()).Get(srv.ScriptURL())
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -133,7 +147,7 @@ func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create HEAD request: %v", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
 	}
@@ -162,7 +176,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if _, err := http.Get(srv.ScriptURL()); err != nil {
+	if _, err := serverHTTPClient(srv.OriginURL()).Get(srv.ScriptURL()); err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
 
@@ -170,7 +184,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create HEAD request: %v", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
 	}
@@ -180,7 +194,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create POST request: %v", err)
 	}
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("POST %s: %v", srv.ScriptURL(), err)
 	}
@@ -196,4 +210,17 @@ func TestServer_LogsAllRequests(t *testing.T) {
 	if !strings.Contains(got, "method=POST") {
 		t.Fatalf("expected POST log, got: %q", got)
 	}
+}
+
+func serverHTTPClient(originURL string) *http.Client {
+	if strings.HasPrefix(originURL, "unix://") {
+		socketPath := strings.TrimPrefix(originURL, "unix://")
+		tr := &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "unix", socketPath)
+			},
+		}
+		return &http.Client{Transport: tr}
+	}
+	return http.DefaultClient
 }
