@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -15,15 +14,8 @@ import (
 )
 
 func TestServer_ServesScriptFile(t *testing.T) {
-	// Write a temporary script file.
-	dir := t.TempDir()
-	scriptPath := filepath.Join(dir, "hello.py")
 	content := "print('hello')\n"
-	if err := os.WriteFile(scriptPath, []byte(content), 0o644); err != nil {
-		t.Fatalf("write temp file: %v", err)
-	}
-
-	srv, err := server.New(scriptPath)
+	srv, err := server.New([]byte(content), "text/x-python; charset=utf-8")
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -58,16 +50,13 @@ func TestServer_ServesScriptFile(t *testing.T) {
 	if !strings.Contains(string(body), "print") {
 		t.Errorf("unexpected body: %q", string(body))
 	}
+	if ct := resp.Header.Get("Content-Type"); ct != "text/x-python; charset=utf-8" {
+		t.Errorf("unexpected Content-Type: %q", ct)
+	}
 }
 
 func TestServer_URLFormat(t *testing.T) {
-	dir := t.TempDir()
-	scriptPath := filepath.Join(dir, "test.py")
-	if err := os.WriteFile(scriptPath, []byte(""), 0o644); err != nil {
-		t.Fatalf("write temp file: %v", err)
-	}
-
-	srv, err := server.New(scriptPath)
+	srv, err := server.New([]byte(""), "text/x-python; charset=utf-8")
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -75,7 +64,17 @@ func TestServer_URLFormat(t *testing.T) {
 	if !strings.HasPrefix(srv.URL(), "http://127.0.0.1:") {
 		t.Errorf("unexpected URL: %q", srv.URL())
 	}
-	if !strings.HasSuffix(srv.ScriptURL(), "/test.py") {
-		t.Errorf("unexpected ScriptURL: %q", srv.ScriptURL())
+
+	scriptURL := srv.ScriptURL()
+	if !strings.HasPrefix(scriptURL, srv.URL()+"/") {
+		t.Errorf("unexpected ScriptURL prefix: %q", scriptURL)
+	}
+
+	id := strings.TrimPrefix(scriptURL, srv.URL()+"/")
+	if strings.Contains(id, ".") {
+		t.Errorf("expected extensionless script id, got %q", id)
+	}
+	if ok, _ := regexp.MatchString("^[a-f0-9]{32}$", id); !ok {
+		t.Errorf("expected 32-char lowercase hex script id, got %q", id)
 	}
 }
