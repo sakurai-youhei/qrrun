@@ -1,6 +1,20 @@
 # qrrun
 Tunnel local code. Run via QR.
 
+## Usage
+
+Run with a local file:
+
+```bash
+qrrun --transport cloudflared --runtime pythonista3 hello.py
+```
+
+Run from stdin (`-`):
+
+```bash
+echo "print('hello from stdin')" | qrrun --transport cloudflared --runtime pythonista3 -
+```
+
 ## Development Setup (gvm)
 
 This project uses Go `1.24.13`.

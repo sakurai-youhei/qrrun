@@ -4,6 +4,7 @@
 // Usage:
 //
 //	qrrun --transport cloudflared --runtime pythonista3 your-local-script.py
+//	echo "print('hello')" | qrrun --transport cloudflared --runtime pythonista3 -
 package main
 
 import (
@@ -27,7 +28,7 @@ func newRootCmd() *cobra.Command {
 	var runtimeName string
 
 	cmd := &cobra.Command{
-		Use:   "qrrun [flags] <script>",
+		Use:   "qrrun [flags] <script|-]",
 		Short: "Tunnel local code. Run via QR.",
 		Long: `qrrun serves a local script over a secure tunnel and displays a QR code.
 
@@ -35,7 +36,8 @@ Scan the QR code with your mobile device to open the script in the configured
 runtime (e.g. Pythonista 3 on iOS).
 
 Examples:
-  qrrun --transport cloudflared --runtime pythonista3 hello.py`,
+	qrrun --transport cloudflared --runtime pythonista3 hello.py
+	echo "print('hello')" | qrrun --transport cloudflared --runtime pythonista3 -`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return app.Run(app.Options{
