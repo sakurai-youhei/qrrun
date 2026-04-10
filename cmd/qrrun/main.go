@@ -57,7 +57,7 @@ Examples:
 	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
 		`Tunnel transport to use. Available: cloudflared`)
 	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
-		`Mobile runtime to target. Available: pythonista3`)
+		`Mobile runtime to target. Available: pythonista, pythonista2, pythonista3`)
 
 	return cmd
 }

@@ -60,6 +60,10 @@ func Run(opts Options) error {
 		defer cleanup()
 	}
 
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("script path: %w", err)
+	}
+
 	srv, err := server.New(scriptPath)
 	if err != nil {
 		return err
