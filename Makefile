@@ -1,5 +1,7 @@
 .PHONY: help gvm-setup build test lint vet clean
 
+.DEFAULT_GOAL := build
+
 BINARY := qrrun
 CMD     := ./cmd/qrrun
 GOLANGCI_LINT_VERSION := v1.64.8
