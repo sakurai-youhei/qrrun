@@ -22,6 +22,7 @@ type Options struct {
 	TransportName string
 	RuntimeName   string
 	ScriptPath    string
+	Input         io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
 	Output        io.Writer // destination for the QR code; defaults to os.Stdout
 }
 
@@ -32,6 +33,9 @@ type Options struct {
 //  4. Prints the QR code to opts.Output once the public URL is known.
 //  5. Blocks until the process receives SIGINT / SIGTERM.
 func Run(opts Options) error {
+	if opts.Input == nil {
+		opts.Input = os.Stdin
+	}
 	if opts.Output == nil {
 		opts.Output = os.Stdout
 	}
@@ -46,7 +50,17 @@ func Run(opts Options) error {
 		return err
 	}
 
-	srv, err := server.New(opts.ScriptPath)
+	scriptPath := opts.ScriptPath
+	cleanup := func() {}
+	if opts.ScriptPath == "-" {
+		scriptPath, cleanup, err = materializeStdinScript(opts.Input)
+		if err != nil {
+			return err
+		}
+		defer cleanup()
+	}
+
+	srv, err := server.New(scriptPath)
 	if err != nil {
 		return err
 	}
@@ -106,6 +120,28 @@ func Run(opts Options) error {
 		}
 	}
 	return nil
+}
+
+func materializeStdinScript(input io.Reader) (string, func(), error) {
+	tmpFile, err := os.CreateTemp("", "qrrun-stdin-*.py")
+	if err != nil {
+		return "", nil, fmt.Errorf("create temp script: %w", err)
+	}
+
+	if _, err := io.Copy(tmpFile, input); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmpFile.Name())
+		return "", nil, fmt.Errorf("read stdin: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmpFile.Name())
+		return "", nil, fmt.Errorf("close temp script: %w", err)
+	}
+
+	cleanup := func() {
+		_ = os.Remove(tmpFile.Name())
+	}
+	return tmpFile.Name(), cleanup, nil
 }
 
 // replaceBase swaps the local base URL in rawURL with publicBase.
