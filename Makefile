@@ -2,6 +2,7 @@
 
 BINARY := qrrun
 CMD     := ./cmd/qrrun
+GOLANGCI_LINT_VERSION := v1.64.8
 
 ## help: show available make targets
 help:
@@ -21,9 +22,13 @@ build:
 test:
 	go test ./...
 
-## lint: run golangci-lint (requires golangci-lint to be installed)
+## lint: run golangci-lint (uses go run fallback when not installed)
 lint:
-	golangci-lint run ./...
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run ./...; \
+	else \
+		go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run ./...; \
+	fi
 
 ## vet: run go vet
 vet:
