@@ -51,8 +51,8 @@ func Run(opts Options) error {
 	}
 
 	scriptPath := opts.ScriptPath
-	cleanup := func() {}
 	if opts.ScriptPath == "-" {
+		var cleanup func()
 		scriptPath, cleanup, err = materializeStdinScript(opts.Input)
 		if err != nil {
 			return err

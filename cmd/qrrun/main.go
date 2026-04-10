@@ -35,6 +35,11 @@ func newRootCmd() *cobra.Command {
 Scan the QR code with your mobile device to open the script in the configured
 runtime (e.g. Pythonista 3 on iOS).
 
+Prerequisite:
+	cloudflared must be installed and available on PATH.
+	qrrun uses Cloudflare Quick Tunnels (trycloudflare.com),
+	so account login is not required.
+
 Examples:
 	qrrun --transport cloudflared --runtime pythonista3 hello.py
 	echo "print('hello')" | qrrun --transport cloudflared --runtime pythonista3 -`,
