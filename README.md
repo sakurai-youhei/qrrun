@@ -1,6 +1,12 @@
 # qrrun
 Tunnel local code. Run via QR.
 
+## Prerequisites
+
+- `cloudflared` must be installed and available in your PATH.
+- `qrrun` uses Cloudflare Quick Tunnels:
+	https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/
+
 ## Usage
 
 Run with a local file:
