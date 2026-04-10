@@ -21,6 +21,15 @@ Run from stdin (`-`):
 echo "print('hello from stdin')" | qrrun --transport cloudflared --runtime pythonista3 -
 ```
 
+Show version:
+
+```bash
+qrrun --version
+```
+
+Current release stage uses Go-style semantic versioning with pre-release tags,
+starting from `v0.1.0-alpha.0`.
+
 ## Development Setup (gvm)
 
 This project uses Go `1.24.13`.
