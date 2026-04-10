@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/mdp/qrterminal/v3"
 
@@ -19,12 +20,16 @@ import (
 
 // Options holds the configuration for a single qrrun invocation.
 type Options struct {
-	TransportName string
-	RuntimeName   string
-	ScriptPath    string
-	Input         io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
-	Output        io.Writer // destination for the QR code; defaults to os.Stdout
+	TransportName   string
+	RuntimeName     string
+	ScriptPath      string
+	KeepServing     bool
+	ExitQuietPeriod time.Duration
+	Input           io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
+	Output          io.Writer // destination for the QR code; defaults to os.Stdout
 }
+
+const DefaultExitQuietPeriod = 500 * time.Millisecond
 
 // Run performs the full qrrun workflow:
 //  1. Validates options and resolves the transport / runtime.
@@ -38,6 +43,10 @@ func Run(opts Options) error {
 	}
 	if opts.Output == nil {
 		opts.Output = os.Stdout
+	}
+	quietPeriod := opts.ExitQuietPeriod
+	if quietPeriod <= 0 {
+		quietPeriod = DefaultExitQuietPeriod
 	}
 
 	t, err := transport.New(opts.TransportName)
@@ -55,7 +64,7 @@ func Run(opts Options) error {
 		return err
 	}
 
-	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8")
+	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -100,9 +109,69 @@ func Run(opts Options) error {
 		WhiteChar: qrterminal.WHITE,
 		QuietZone: 1,
 	})
-	fmt.Fprintf(opts.Output, "\nURL: %s\n\nPress Ctrl+C to stop.\n", scriptPublicURL)
+	if opts.KeepServing {
+		fmt.Fprintf(opts.Output, "\nURL: %s\n\nKeep-serving mode enabled. Press Ctrl+C to stop.\n", scriptPublicURL)
+	} else {
+		fmt.Fprintf(opts.Output, "\nURL: %s\n\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", scriptPublicURL, quietPeriod)
+	}
 
-	// Block until cancelled.
+	if !opts.KeepServing {
+		// Default mode: wait for successful delivery, then exit after a quiet period.
+		timer := time.NewTimer(24 * time.Hour)
+		timer.Stop()
+		defer timer.Stop()
+		hasDelivery := false
+
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-srv.DeliveryEvents():
+			hasDelivery = true
+			timer.Reset(quietPeriod)
+		case err := <-serverErrCh:
+			if err != nil {
+				return err
+			}
+			return nil
+		case err := <-transportErrCh:
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-srv.DeliveryEvents():
+				hasDelivery = true
+				if !timer.Stop() {
+					select {
+					case <-timer.C:
+					default:
+					}
+				}
+				timer.Reset(quietPeriod)
+			case <-timer.C:
+				if hasDelivery {
+					return nil
+				}
+			case err := <-serverErrCh:
+				if err != nil {
+					return err
+				}
+				return nil
+			case err := <-transportErrCh:
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+		}
+	}
+
+	// Multi-request mode: keep running until cancelled.
 	select {
 	case <-ctx.Done():
 	case err := <-serverErrCh:
