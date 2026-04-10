@@ -16,6 +16,12 @@ import (
 	"github.com/sakurai-youhei/qrrun/internal/app"
 )
 
+var (
+	version = "v0.1.0-alpha.0"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -56,6 +62,9 @@ Examples:
 		},
 		SilenceUsage: true,
 	}
+
+	cmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
+	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
 		`Tunnel transport to use. Available: cloudflared`)

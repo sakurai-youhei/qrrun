@@ -3,6 +3,10 @@
 BINARY := qrrun
 CMD     := ./cmd/qrrun
 GOLANGCI_LINT_VERSION := v1.64.8
+VERSION ?= v0.1.0-alpha.0
+COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
+DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+LDFLAGS := -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)' -X 'main.date=$(DATE)'
 
 ## help: show available make targets
 help:
@@ -16,7 +20,7 @@ gvm-setup:
 
 ## build: compile the binary
 build:
-	go build -o $(BINARY) $(CMD)
+	go build -ldflags "$(LDFLAGS)" -o $(BINARY) $(CMD)
 
 ## test: run all tests
 test:
