@@ -3,9 +3,9 @@
 package server
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"context"
 	"errors"
 	"fmt"
 	"net"
