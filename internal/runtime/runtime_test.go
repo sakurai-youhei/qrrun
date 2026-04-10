@@ -59,8 +59,11 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if execCode == "" {
 			t.Errorf("expected exec query parameter for %q, got %q", tc.name, got)
 		}
-		if !strings.Contains(execCode, "urllib.request.urlopen") {
-			t.Errorf("expected urllib.request.urlopen in exec code for %q, got %q", tc.name, execCode)
+		if !strings.HasPrefix(execCode, "import requests as r;") {
+			t.Errorf("expected requests one-liner prefix in exec code for %q, got %q", tc.name, execCode)
+		}
+		if !strings.Contains(execCode, "exec(r.get(") {
+			t.Errorf("expected r.get execution in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, rawURL) {
 			t.Errorf("expected raw URL in exec code for %q, got %q", tc.name, execCode)
