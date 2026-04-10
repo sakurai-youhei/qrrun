@@ -1,7 +1,6 @@
 package runtime_test
 
 import (
-	"net/url"
 	"strings"
 	"testing"
 
@@ -51,12 +50,12 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 			t.Errorf("expected %s:// scheme, got %q", tc.scheme, got)
 		}
 
-		u, err := url.Parse(got)
-		if err != nil {
-			t.Fatalf("parse url for %q: %v", tc.name, err)
+		prefix := tc.scheme + "://?exec="
+		if !strings.HasPrefix(got, prefix) {
+			t.Errorf("expected %q prefix for %q, got %q", prefix, tc.name, got)
 		}
 
-		execCode := u.Query().Get("exec")
+		execCode := strings.TrimPrefix(got, prefix)
 		if execCode == "" {
 			t.Errorf("expected exec query parameter for %q, got %q", tc.name, got)
 		}
@@ -65,6 +64,9 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		}
 		if !strings.Contains(execCode, rawURL) {
 			t.Errorf("expected raw URL in exec code for %q, got %q", tc.name, execCode)
+		}
+		if strings.Contains(execCode, "%") {
+			t.Errorf("expected unencoded exec code for %q, got %q", tc.name, execCode)
 		}
 	}
 }
