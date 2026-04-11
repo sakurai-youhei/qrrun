@@ -6,6 +6,8 @@
 
 Tunnel local code. Run via QR.
 
+![QRrun demo](demo.gif)
+
 ## Prerequisites
 
 - `cloudflared` must be installed and available in your PATH.
