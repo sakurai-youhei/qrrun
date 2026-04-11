@@ -47,5 +47,8 @@ install -m 0755 %{SOURCE0} %{buildroot}/usr/bin/qrrun
 - Automated release build
 EOF
 
-rpmbuild --define "_topdir ${RPM_TOPDIR}" -bb "${RPM_TOPDIR}/SPECS/qrrun.spec"
+rpmbuild \
+  --target "${RPM_ARCH}" \
+  --define "_topdir ${RPM_TOPDIR}" \
+  -bb "${RPM_TOPDIR}/SPECS/qrrun.spec"
 find "${RPM_TOPDIR}/RPMS" -type f -name '*.rpm' -exec cp {} dist/ \;
