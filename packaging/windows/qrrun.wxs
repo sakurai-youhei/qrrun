@@ -18,7 +18,8 @@
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="WixPerMachineFolder">
         <Directory Id="INSTALLDIR_MACHINE" Name="qrrun">
-          <Component Id="QrrunMachine" Guid="*" Condition="ALLUSERS=1">
+          <Component Id="QrrunMachine" Guid="*">
+            <Condition>ALLUSERS=1</Condition>
             <File Id="QrrunExeMachine" Source="$(var.BinarySource)" KeyPath="yes" Name="qrrun.exe" />
             <Environment
               Id="PathMachine"
@@ -33,7 +34,8 @@
       </Directory>
       <Directory Id="WixPerUserFolder">
         <Directory Id="INSTALLDIR_USER" Name="qrrun">
-          <Component Id="QrrunUser" Guid="*" Condition="ALLUSERS&lt;&gt;1">
+          <Component Id="QrrunUser" Guid="*">
+            <Condition>ALLUSERS&lt;&gt;1</Condition>
             <File Id="QrrunExeUser" Source="$(var.BinarySource)" KeyPath="yes" Name="qrrun.exe" />
             <Environment
               Id="PathUser"
