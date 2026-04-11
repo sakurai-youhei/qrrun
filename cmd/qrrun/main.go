@@ -36,6 +36,7 @@ func newRootCmd() *cobra.Command {
 	var keepServing bool
 	var serveMultipleDeprecated bool
 	var exitQuietPeriod time.Duration
+	var urlOnly bool
 
 	cmd := &cobra.Command{
 		Use:   "qrrun [flags] <script|-]",
@@ -61,6 +62,7 @@ Examples:
 				ScriptPath:      args[0],
 				KeepServing:     keepServingMode,
 				ExitQuietPeriod: exitQuietPeriod,
+				URLOnly:         urlOnly,
 			})
 		},
 		SilenceUsage: true,
@@ -77,6 +79,8 @@ Examples:
 		`Keep serving requests until interrupted. By default qrrun exits after successful delivery and a short quiet period.`)
 	cmd.Flags().DurationVar(&exitQuietPeriod, "exit-quiet-period", app.DefaultExitQuietPeriod,
 		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
+	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
+		`Print only the runtime URL as a single line (no QR code or status text).`)
 	cmd.Flags().BoolVar(&serveMultipleDeprecated, "serve-multiple", false,
 		`Deprecated alias of --keep-serving.`)
 	_ = cmd.Flags().MarkDeprecated("serve-multiple", "use --keep-serving instead")
