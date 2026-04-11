@@ -1,4 +1,4 @@
-# qrrun
+# QRrun
 [![CI](https://github.com/sakurai-youhei/qrrun/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sakurai-youhei/qrrun/actions/workflows/ci.yml)
 [![Release](https://github.com/sakurai-youhei/qrrun/actions/workflows/release.yml/badge.svg)](https://github.com/sakurai-youhei/qrrun/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/sakurai-youhei/qrrun)](https://github.com/sakurai-youhei/qrrun/releases)
@@ -9,7 +9,7 @@ Tunnel local code. Run via QR.
 ## Prerequisites
 
 - `cloudflared` must be installed and available in your PATH.
-- `qrrun` uses Cloudflare Quick Tunnels (`trycloudflare.com`).
+- QRrun uses Cloudflare Quick Tunnels (`trycloudflare.com`).
 
 See [Cloudflare Quick Tunnel documentation](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/) for details.
 
@@ -27,7 +27,7 @@ Run from stdin (`-`):
 echo "print('hello from stdin')" | qrrun -
 ```
 
-By default, `qrrun` generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
+By default, QRrun generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
 For more options and behavior details, run `qrrun --help`.
 
 ## Installation
