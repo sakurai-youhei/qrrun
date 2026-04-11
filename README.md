@@ -34,8 +34,6 @@ For more options and behavior details, run `qrrun --help`.
 
 ### Linux / macOS
 
-Install from GitHub Releases using the maintained installer script:
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash
 ```
@@ -46,9 +44,7 @@ Install a specific version:
 curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash -s -- v0.1.0
 ```
 
-### Windows (cmd + curl + msiexec)
-
-Run the Windows installer script directly from the repository:
+### Windows
 
 ```cmd
 curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd
@@ -77,15 +73,6 @@ This project uses Go `1.24.13`.
 ```bash
 make gvm-setup
 ```
-
-Or run directly:
-
-```bash
-gvm install go1.24.13
-gvm use go1.24.13
-```
-
-The expected version is also stored in `.gvmrc`.
 
 ## Release
 
