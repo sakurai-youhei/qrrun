@@ -16,8 +16,11 @@ import (
 // Cloudflared uses the cloudflared quick-tunnel feature to expose a local URL.
 // The cloudflared binary must be available on PATH.
 type Cloudflared struct {
-	CommandLog io.Writer
-	ExtraArgs  []string
+	CommandLog   io.Writer
+	ExtraArgs    []string
+	LogStdout    bool
+	LogStderr    bool
+	LogConfigSet bool
 }
 
 // tunnelURLRe matches the public URL printed by cloudflared logs.
@@ -67,11 +70,13 @@ func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- 
 		outputCapture.WriteByte('\n')
 	}
 
-	scanOutput := func(r io.Reader) {
+	scanOutput := func(r io.Reader, shouldLog bool) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
 			line := scanner.Text()
-			fmt.Fprintf(c.commandLogWriter(), "cloudflared: %s\n", line)
+			if shouldLog {
+				fmt.Fprintf(c.commandLogWriter(), "cloudflared: %s\n", line)
+			}
 			appendCapture(line)
 			if m := tunnelURLRe.FindString(line); m != "" {
 				select {
@@ -86,11 +91,11 @@ func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- 
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		scanOutput(stdout)
+		scanOutput(stdout, c.logStdoutEnabled())
 	}()
 	go func() {
 		defer wg.Done()
-		scanOutput(stderr)
+		scanOutput(stderr, c.logStderrEnabled())
 	}()
 
 	scanDoneCh := make(chan struct{})
@@ -150,9 +155,8 @@ func (c *Cloudflared) buildArgs(localURL string) []string {
 		args = append(args, c.ExtraArgs...)
 	}
 	if strings.HasPrefix(localURL, "unix://") {
-		socketPath := strings.TrimPrefix(localURL, "unix://")
-		// Use unix socket URL directly so cloudflared does not fall back to localhost:80.
-		return append(args, "--url", "unix:"+socketPath)
+		// Keep unix URL as-is (unix:///path) to avoid it being interpreted as http://unix:/path.
+		return append(args, "--url", localURL)
 	}
 	return append(args, "--url", localURL)
 }
@@ -162,4 +166,20 @@ func (c *Cloudflared) commandLogWriter() io.Writer {
 		return os.Stdout
 	}
 	return c.CommandLog
+}
+
+func (c *Cloudflared) logStdoutEnabled() bool {
+	if !c.LogConfigSet {
+		// Default behavior when not configured explicitly: print both streams.
+		return true
+	}
+	return c.LogStdout
+}
+
+func (c *Cloudflared) logStderrEnabled() bool {
+	if !c.LogConfigSet {
+		// Default behavior when not configured explicitly: print both streams.
+		return true
+	}
+	return c.LogStderr
 }
