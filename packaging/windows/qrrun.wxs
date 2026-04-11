@@ -12,6 +12,7 @@
     <MediaTemplate EmbedCab="yes" />
 
     <Property Id="WixAppFolder" Value="WixPerMachineFolder" />
+    <Property Id="ApplicationFolderName" Value="qrrun" />
     <Property Id="WixUISupportPerUser" Value="1" />
     <Property Id="WixUISupportPerMachine" Value="1" />
 
