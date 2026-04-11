@@ -27,6 +27,8 @@ type Options struct {
 	ScriptPath      string
 	KeepServing     bool
 	ExitQuietPeriod time.Duration
+	TransportStdout bool
+	TransportStderr bool
 	URLOnly         bool
 	CloudflaredOpts []string
 	Input           io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
@@ -64,6 +66,13 @@ func Run(opts Options) error {
 	}
 	if cf, ok := t.(*transport.Cloudflared); ok {
 		cf.ExtraArgs = append([]string(nil), opts.CloudflaredOpts...)
+		cf.LogStdout = opts.TransportStdout
+		cf.LogStderr = opts.TransportStderr
+		cf.LogConfigSet = true
+		if opts.URLOnly {
+			cf.LogStdout = false
+			cf.LogStderr = false
+		}
 	}
 
 	rt, err := runtime.New(opts.RuntimeName)

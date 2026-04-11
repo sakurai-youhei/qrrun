@@ -44,3 +44,33 @@ func TestCloudflaredBuildArgs_UnixOrigin(t *testing.T) {
 		t.Fatalf("unexpected args: got %#v, want %#v", got, want)
 	}
 }
+
+func TestCloudflaredLogEnable_DefaultsToBothStreams(t *testing.T) {
+	c := &Cloudflared{}
+	if !c.logStdoutEnabled() {
+		t.Fatal("expected stdout logging enabled by default")
+	}
+	if !c.logStderrEnabled() {
+		t.Fatal("expected stderr logging enabled by default")
+	}
+}
+
+func TestCloudflaredLogEnable_ExplicitValues(t *testing.T) {
+	c := &Cloudflared{LogStdout: true, LogStderr: false, LogConfigSet: true}
+	if !c.logStdoutEnabled() {
+		t.Fatal("expected stdout logging enabled")
+	}
+	if c.logStderrEnabled() {
+		t.Fatal("expected stderr logging disabled")
+	}
+}
+
+func TestCloudflaredLogEnable_ExplicitDisableBoth(t *testing.T) {
+	c := &Cloudflared{LogStdout: false, LogStderr: false, LogConfigSet: true}
+	if c.logStdoutEnabled() {
+		t.Fatal("expected stdout logging disabled")
+	}
+	if c.logStderrEnabled() {
+		t.Fatal("expected stderr logging disabled")
+	}
+}
