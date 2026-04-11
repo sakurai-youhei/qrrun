@@ -60,11 +60,11 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if execCode == "" {
 			t.Errorf("expected exec query parameter for %q, got %q", tc.name, got)
 		}
-		if !strings.HasPrefix(execCode, "import requests as r;") {
-			t.Errorf("expected requests one-liner prefix in exec code for %q, got %q", tc.name, execCode)
+		if !strings.HasPrefix(execCode, "exec(__import__(\"requests\").get(") {
+			t.Errorf("expected single-expression __import__ prefix in exec code for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, "exec(r.get(") {
-			t.Errorf("expected r.get execution in exec code for %q, got %q", tc.name, execCode)
+		if !strings.Contains(execCode, ").text)") {
+			t.Errorf("expected .text execution suffix in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, "Authorization") {
 			t.Errorf("expected Authorization header in exec code for %q, got %q", tc.name, execCode)
