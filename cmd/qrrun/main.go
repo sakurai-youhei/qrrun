@@ -38,7 +38,7 @@ func newRootCmd() *cobra.Command {
 	var exitQuietPeriod time.Duration
 	var transportStderr bool
 	var transportStdout bool
-	var urlOnly bool
+	var printURL bool
 	var transportOpts string
 
 	cmd := &cobra.Command{
@@ -67,7 +67,7 @@ Examples:
 				ExitQuietPeriod: exitQuietPeriod,
 				TransportStdout: transportStdout,
 				TransportStderr: transportStderr,
-				URLOnly:         urlOnly,
+				PrintURL:        printURL,
 				CloudflaredOpts: strings.Fields(transportOpts),
 			})
 		},
@@ -91,7 +91,7 @@ Examples:
 		`Enable transport stderr output to console.`)
 	cmd.Flags().BoolVar(&transportStdout, "transport-stdout", false,
 		`Enable transport stdout output to console.`)
-	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
+	cmd.Flags().BoolVar(&printURL, "print-url", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
 
 	return cmd
