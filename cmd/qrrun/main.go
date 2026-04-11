@@ -36,6 +36,8 @@ func newRootCmd() *cobra.Command {
 	var runtimeName string
 	var keepServing bool
 	var exitQuietPeriod time.Duration
+	var transportStderr bool
+	var transportStdout bool
 	var urlOnly bool
 	var transportOpts string
 
@@ -63,6 +65,8 @@ Examples:
 				ScriptPath:      args[0],
 				KeepServing:     keepServingMode,
 				ExitQuietPeriod: exitQuietPeriod,
+				TransportStdout: transportStdout,
+				TransportStderr: transportStderr,
 				URLOnly:         urlOnly,
 				CloudflaredOpts: strings.Fields(transportOpts),
 			})
@@ -83,6 +87,10 @@ Examples:
 		`Tunnel transport to use. Available: cloudflared`)
 	cmd.Flags().StringVar(&transportOpts, "transport-opts", "",
 		`Extra options passed to the selected transport command (example: --transport-opts='--loglevel debug').`)
+	cmd.Flags().BoolVar(&transportStderr, "transport-stderr", true,
+		`Print transport stderr output to console.`)
+	cmd.Flags().BoolVar(&transportStdout, "transport-stdout", true,
+		`Print transport stdout output to console.`)
 	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
 
