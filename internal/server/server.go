@@ -12,12 +12,14 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 )
 
 // Server is an in-memory single-script HTTP server.
 type Server struct {
 	scriptID    string
+	bearerToken string
 	scriptBytes []byte
 	contentType string
 	requestLog  io.Writer
@@ -32,10 +34,13 @@ type Server struct {
 
 // New creates a Server that serves scriptBytes on a random free port.
 // The script is exposed at /<uuid-without-extension>.
-func New(scriptBytes []byte, contentType string, requestLog io.Writer) (*Server, error) {
+func New(scriptBytes []byte, contentType string, bearerToken string, requestLog io.Writer) (*Server, error) {
 	ln, baseURL, originURL, cleanup, err := newOriginListener()
 	if err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(bearerToken) == "" {
+		return nil, fmt.Errorf("server: bearer token is required")
 	}
 	if requestLog == nil {
 		requestLog = os.Stdout
@@ -48,6 +53,7 @@ func New(scriptBytes []byte, contentType string, requestLog io.Writer) (*Server,
 
 	return &Server{
 		scriptID:    scriptID,
+		bearerToken: bearerToken,
 		scriptBytes: scriptBytes,
 		contentType: contentType,
 		requestLog:  requestLog,
@@ -93,6 +99,12 @@ func (s *Server) Serve(ctx context.Context) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/"+s.scriptID, func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(s.requestLog, "request: method=%s path=%s remote=%s\n", r.Method, r.URL.Path, r.RemoteAddr)
+		auth := strings.TrimSpace(r.Header.Get("Authorization"))
+		if auth != "Bearer "+s.bearerToken {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return

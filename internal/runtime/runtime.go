@@ -13,7 +13,7 @@ import (
 type Runtime interface {
 	// QRCodeURL returns the URL to encode in the QR code given the public URL
 	// of the script.
-	QRCodeURL(publicURL string) string
+	QRCodeURL(publicURL string, bearerToken string) string
 }
 
 // New returns a Runtime for the given name or an error when the name is

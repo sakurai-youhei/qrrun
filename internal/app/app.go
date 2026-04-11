@@ -4,6 +4,8 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -64,7 +66,12 @@ func Run(opts Options) error {
 		return err
 	}
 
-	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", os.Stdout)
+	bearerToken, err := generateBearerToken()
+	if err != nil {
+		return fmt.Errorf("generate bearer token: %w", err)
+	}
+
+	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", bearerToken, os.Stdout)
 	if err != nil {
 		return err
 	}
@@ -99,7 +106,7 @@ func Run(opts Options) error {
 
 	// Build the QR code URL: replace the local base URL with the public one,
 	// then let the runtime wrap it in the appropriate URL scheme.
-	scriptPublicURL := rt.QRCodeURL(replaceBase(srv.ScriptURL(), publicURL))
+	scriptPublicURL := rt.QRCodeURL(replaceBase(srv.ScriptURL(), publicURL), bearerToken)
 
 	fmt.Fprintf(opts.Output, "\nScan the QR code below with your phone:\n\n")
 	qrterminal.GenerateWithConfig(scriptPublicURL, qrterminal.Config{
@@ -184,6 +191,14 @@ func Run(opts Options) error {
 		}
 	}
 	return nil
+}
+
+func generateBearerToken() (string, error) {
+	raw := make([]byte, 24)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(raw), nil
 }
 
 func loadScriptContent(scriptPath string, input io.Reader) ([]byte, error) {

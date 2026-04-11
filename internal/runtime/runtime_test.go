@@ -38,6 +38,7 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 	}
 
 	rawURL := "https://example.trycloudflare.com/hello.py"
+	bearerToken := "test-token-123"
 
 	for _, tc := range tests {
 		rt, err := runtime.New(tc.name)
@@ -45,7 +46,7 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 			t.Fatalf("unexpected error for %q: %v", tc.name, err)
 		}
 
-		got := rt.QRCodeURL(rawURL)
+		got := rt.QRCodeURL(rawURL, bearerToken)
 		if !strings.HasPrefix(got, tc.scheme+"://") {
 			t.Errorf("expected %s:// scheme, got %q", tc.scheme, got)
 		}
@@ -64,6 +65,12 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		}
 		if !strings.Contains(execCode, "exec(r.get(") {
 			t.Errorf("expected r.get execution in exec code for %q, got %q", tc.name, execCode)
+		}
+		if !strings.Contains(execCode, "Authorization") {
+			t.Errorf("expected Authorization header in exec code for %q, got %q", tc.name, execCode)
+		}
+		if !strings.Contains(execCode, "Bearer "+bearerToken) {
+			t.Errorf("expected Bearer token in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, rawURL) {
 			t.Errorf("expected raw URL in exec code for %q, got %q", tc.name, execCode)
