@@ -10,6 +10,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -36,6 +37,7 @@ func newRootCmd() *cobra.Command {
 	var keepServing bool
 	var exitQuietPeriod time.Duration
 	var urlOnly bool
+	var cloudflaredOpts string
 
 	cmd := &cobra.Command{
 		Use:   "qrrun [flags] <script|-]",
@@ -62,6 +64,7 @@ Examples:
 				KeepServing:     keepServingMode,
 				ExitQuietPeriod: exitQuietPeriod,
 				URLOnly:         urlOnly,
+				CloudflaredOpts: strings.Fields(cloudflaredOpts),
 			})
 		},
 		SilenceUsage: true,
@@ -80,6 +83,8 @@ Examples:
 		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
 	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
+	cmd.Flags().StringVar(&cloudflaredOpts, "cloudflared-opts", "",
+		`Extra options passed to "cloudflared tunnel" (example: --cloudflared-opts='--loglevel debug').`)
 
 	return cmd
 }
