@@ -30,6 +30,20 @@ echo "print('hello from stdin')" | qrrun -
 By default, `qrrun` generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
 For more options and behavior details, run `qrrun --help`.
 
+## Installation
+
+Install from GitHub Releases using the maintained installer script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash
+```
+
+Install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash -s -- v0.1.0
+```
+
 ## Development Setup (gvm)
 
 This project uses Go `1.24.13`.
