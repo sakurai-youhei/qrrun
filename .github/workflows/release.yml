@@ -208,6 +208,9 @@ jobs:
       - build-msi
     if: needs.guard-main.outputs.on_main == 'true'
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download all packaged artifacts
         uses: actions/download-artifact@v4
         with:
