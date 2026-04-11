@@ -2,6 +2,7 @@ package transport
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -25,14 +26,14 @@ var tunnelURLRe = regexp.MustCompile(`https://[a-z0-9-]+\.trycloudflare\.com`)
 // resulting public URL to urlCh.  It returns when ctx is cancelled or the
 // subprocess exits unexpectedly.
 func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- string) error {
-	args := []string{"tunnel"}
+	args := []string{"tunnel", "--loglevel", "debug"}
 	if strings.HasPrefix(localURL, "unix://") {
 		socketPath := strings.TrimPrefix(localURL, "unix://")
 		args = append(args, "--url", "http://localhost", "--unix-socket", socketPath)
-		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --url http://localhost --unix-socket %s\n", socketPath)
+		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --loglevel debug --url http://localhost --unix-socket %s\n", socketPath)
 	} else {
 		args = append(args, "--url", localURL)
-		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --url %s\n", localURL)
+		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --loglevel debug --url %s\n", localURL)
 	}
 
 	cmd := exec.CommandContext(ctx, "cloudflared", args...)
@@ -53,16 +54,36 @@ func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- 
 	}
 
 	foundURLCh := make(chan string, 1)
+	var outputCapture bytes.Buffer
+	outputCaptureMax := 128 * 1024
+
+	appendCapture := func(line string) {
+		if outputCapture.Len() >= outputCaptureMax {
+			return
+		}
+		remaining := outputCaptureMax - outputCapture.Len()
+		if len(line)+1 > remaining {
+			if remaining > 1 {
+				outputCapture.WriteString(line[:remaining-1])
+				outputCapture.WriteByte('\n')
+			}
+			return
+		}
+		outputCapture.WriteString(line)
+		outputCapture.WriteByte('\n')
+	}
 
 	scanOutput := func(r io.Reader) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
-			if m := tunnelURLRe.FindString(scanner.Text()); m != "" {
+			line := scanner.Text()
+			fmt.Fprintf(c.commandLogWriter(), "cloudflared: %s\n", line)
+			appendCapture(line)
+			if m := tunnelURLRe.FindString(line); m != "" {
 				select {
 				case foundURLCh <- m:
 				default:
 				}
-				return
 			}
 		}
 	}
@@ -113,12 +134,18 @@ waitURL:
 			// Cancelled by the caller — not an error.
 			return nil
 		}
-		return fmt.Errorf("cloudflared: exited unexpectedly: %w", err)
+		if outputCapture.Len() == 0 {
+			return fmt.Errorf("cloudflared: exited unexpectedly: %w", err)
+		}
+		return fmt.Errorf("cloudflared: exited unexpectedly: %w\ncloudflared output:\n%s", err, strings.TrimSpace(outputCapture.String()))
 	}
 	<-scanDoneCh
 
 	if !urlSent {
-		return fmt.Errorf("cloudflared: quick tunnel URL not found in output")
+		if outputCapture.Len() == 0 {
+			return fmt.Errorf("cloudflared: quick tunnel URL not found in output")
+		}
+		return fmt.Errorf("cloudflared: quick tunnel URL not found in output\ncloudflared output:\n%s", strings.TrimSpace(outputCapture.String()))
 	}
 	return nil
 }
