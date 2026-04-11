@@ -71,7 +71,7 @@ This project uses Go `1.24.13`.
 2. Install the required Go version and activate it:
 
 ```bash
-make gvm-setup
+make setup-go-gvm
 ```
 
 ## Release
