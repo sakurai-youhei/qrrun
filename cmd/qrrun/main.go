@@ -34,7 +34,6 @@ func newRootCmd() *cobra.Command {
 	var transportName string
 	var runtimeName string
 	var keepServing bool
-	var serveMultipleDeprecated bool
 	var exitQuietPeriod time.Duration
 	var urlOnly bool
 
@@ -55,7 +54,7 @@ Examples:
 	echo "print('hello')" | qrrun -`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			keepServingMode := keepServing || serveMultipleDeprecated
+			keepServingMode := keepServing
 			return app.Run(app.Options{
 				TransportName:   transportName,
 				RuntimeName:     runtimeName,
@@ -81,9 +80,6 @@ Examples:
 		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
 	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
-	cmd.Flags().BoolVar(&serveMultipleDeprecated, "serve-multiple", false,
-		`Deprecated alias of --keep-serving.`)
-	_ = cmd.Flags().MarkDeprecated("serve-multiple", "use --keep-serving instead")
 
 	return cmd
 }
