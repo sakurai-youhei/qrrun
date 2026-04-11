@@ -27,10 +27,7 @@ Run from stdin (`-`):
 echo "print('hello from stdin')" | qrrun -
 ```
 
-By default, qrrun generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
-
-By default, qrrun exits after successful content delivery and a short quiet period (`500ms`).
-
+By default, `qrrun` generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
 For more options and behavior details, run `qrrun --help`.
 
 ## Development Setup (gvm)
