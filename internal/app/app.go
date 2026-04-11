@@ -30,7 +30,7 @@ type Options struct {
 	ExitQuietPeriod time.Duration
 	TransportStdout bool
 	TransportStderr bool
-	URLOnly         bool
+	PrintURL        bool
 	CloudflaredOpts []string
 	Input           io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
 	Output          io.Writer // destination for the QR code; defaults to os.Stdout
@@ -60,7 +60,7 @@ func Run(opts Options) error {
 	if err != nil {
 		return err
 	}
-	if opts.URLOnly {
+	if opts.PrintURL {
 		if cf, ok := t.(*transport.Cloudflared); ok {
 			cf.CommandLog = io.Discard
 		}
@@ -70,7 +70,7 @@ func Run(opts Options) error {
 		cf.LogStdout = opts.TransportStdout
 		cf.LogStderr = opts.TransportStderr
 		cf.LogConfigSet = true
-		if opts.URLOnly {
+		if opts.PrintURL {
 			cf.LogStdout = false
 			cf.LogStderr = false
 		}
@@ -92,7 +92,7 @@ func Run(opts Options) error {
 	}
 
 	requestLog := io.Writer(os.Stdout)
-	if opts.URLOnly {
+	if opts.PrintURL {
 		requestLog = io.Discard
 	}
 
@@ -154,7 +154,7 @@ func Run(opts Options) error {
 	// then let the runtime wrap it in the appropriate URL scheme.
 	scriptPublicURL := rt.QRCodeURL(replaceBase(srv.ScriptURL(), publicURL), bearerToken)
 
-	if opts.URLOnly {
+	if opts.PrintURL {
 		fmt.Fprintln(opts.Output, scriptPublicURL)
 	} else {
 		fmt.Fprintf(opts.Output, "\nScan the QR code below with your phone:\n\n")
@@ -166,9 +166,9 @@ func Run(opts Options) error {
 			QuietZone: 1,
 		})
 		if opts.KeepServing {
-			fmt.Fprintf(opts.Output, "\nURL: %s\n\nKeep-serving mode enabled. Press Ctrl+C to stop.\n", scriptPublicURL)
+			fmt.Fprintf(opts.Output, "\nKeep-serving mode enabled. Press Ctrl+C to stop.\n")
 		} else {
-			fmt.Fprintf(opts.Output, "\nURL: %s\n\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", scriptPublicURL, quietPeriod)
+			fmt.Fprintf(opts.Output, "\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", quietPeriod)
 		}
 	}
 

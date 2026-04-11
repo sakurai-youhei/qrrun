@@ -1,4 +1,4 @@
-.PHONY: help build test checks e2e-url-only lint vet pre-commit-install pre-commit-run clean
+.PHONY: help build test checks e2e-print-url lint vet pre-commit-install pre-commit-run clean
 
 .DEFAULT_GOAL := build
 
@@ -25,8 +25,8 @@ test:
 ## checks: run CI-like local checks (test, vet, build, lint)
 checks: test vet build lint
 
-## e2e-url-only: run local --url-only end-to-end test via cloudflared
-e2e-url-only: build
+## e2e-print-url: run local --print-url end-to-end test via cloudflared
+e2e-print-url: build
 	bash ./scripts/e2e_url_only.sh
 
 ## lint: run golangci-lint (uses go run fallback when not installed)

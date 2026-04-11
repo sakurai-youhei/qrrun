@@ -2,12 +2,12 @@
 set -euo pipefail
 
 if ! command -v cloudflared >/dev/null 2>&1; then
-  echo "cloudflared is required for e2e-url-only" >&2
+  echo "cloudflared is required for e2e-print-url" >&2
   exit 1
 fi
 
 if ! command -v python3 >/dev/null 2>&1; then
-  echo "python3 is required for e2e-url-only" >&2
+  echo "python3 is required for e2e-print-url" >&2
   exit 1
 fi
 
@@ -37,11 +37,11 @@ trap cleanup EXIT
 
 script="print('${expected}')"
 
-printf "%s\n" "${script}" | ./qrrun --transport cloudflared --runtime pythonista3 --url-only - >"${stdout_file}" 2>"${stderr_file}" &
+printf "%s\n" "${script}" | ./qrrun --transport cloudflared --runtime pythonista3 --print-url - >"${stdout_file}" 2>"${stderr_file}" &
 qrrun_pid="$!"
 
 for _ in $(seq 1 300); do
-  if [[ -s "${stdout_file}" ]]; then
+  if grep -q '^URL: pythonista3://?exec=' "${stdout_file}" 2>/dev/null; then
     break
   fi
   if ! kill -0 "${qrrun_pid}" >/dev/null 2>&1; then
@@ -58,7 +58,7 @@ if [[ ! -s "${stdout_file}" ]]; then
   exit 1
 fi
 
-url_line="$(head -n 1 "${stdout_file}" | tr -d '\r')"
+url_line="$(grep '^URL: pythonista3://?exec=' "${stdout_file}" | head -n 1 | sed 's/^URL: //' | tr -d '\r')"
 if [[ "${url_line}" != pythonista3://?exec=* ]]; then
   echo "unexpected qrrun output: ${url_line}" >&2
   cat "${stderr_file}" >&2 || true
@@ -77,4 +77,4 @@ fi
 wait "${qrrun_pid}"
 qrrun_pid=""
 
-echo "e2e-url-only passed"
+echo "e2e-print-url passed"
