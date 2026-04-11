@@ -55,7 +55,7 @@ func New(scriptBytes []byte, contentType string, bearerToken string, requestLog 
 		requestLog = os.Stdout
 	}
 
-	tlsConfig, caPEM, err := newOriginTLSConfig()
+	tlsArtifacts, err := newOriginTLSConfig()
 	if err != nil {
 		cleanup()
 		return nil, err
@@ -73,8 +73,8 @@ func New(scriptBytes []byte, contentType string, bearerToken string, requestLog 
 		contentType: contentType,
 		requestLog:  requestLog,
 		listener:    ln,
-		tlsConfig:   tlsConfig,
-		originCAPEM: caPEM,
+		tlsConfig:   tlsArtifacts.config,
+		originCAPEM: tlsArtifacts.serverCAPEM,
 		baseURL:     baseURL,
 		originURL:   originURL,
 		cleanup:     cleanup,
@@ -179,45 +179,88 @@ func newScriptID() (string, error) {
 	return hex.EncodeToString(raw), nil
 }
 
-func newOriginTLSConfig() (*tls.Config, []byte, error) {
-	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+type originTLSArtifacts struct {
+	config      *tls.Config
+	serverCAPEM []byte
+}
+
+func newOriginTLSConfig() (*originTLSArtifacts, error) {
+	serverCAKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
-		return nil, nil, fmt.Errorf("server: generate tls key: %w", err)
+		return nil, fmt.Errorf("server: generate server ca key: %w", err)
 	}
 
-	serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
-	serial, err := rand.Int(rand.Reader, serialLimit)
-	if err != nil {
-		return nil, nil, fmt.Errorf("server: generate tls serial: %w", err)
+	newSerial := func() (*big.Int, error) {
+		serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+		return rand.Int(rand.Reader, serialLimit)
 	}
 
 	now := time.Now().UTC()
-	tmpl := &x509.Certificate{
-		SerialNumber: serial,
+	serverCASerial, err := newSerial()
+	if err != nil {
+		return nil, fmt.Errorf("server: generate server ca serial: %w", err)
+	}
+
+	serverCATmpl := &x509.Certificate{
+		SerialNumber: serverCASerial,
+		Subject: pkix.Name{
+			CommonName: "qrrun-origin-server-ca",
+		},
+		NotBefore:             now.Add(-5 * time.Minute),
+		NotAfter:              now.Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		MaxPathLen:            0,
+		MaxPathLenZero:        true,
+	}
+	serverCADer, err := x509.CreateCertificate(rand.Reader, serverCATmpl, serverCATmpl, &serverCAKey.PublicKey, serverCAKey)
+	if err != nil {
+		return nil, fmt.Errorf("server: create server ca cert: %w", err)
+	}
+	serverCAPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverCADer})
+	serverCAParsed, err := x509.ParseCertificate(serverCADer)
+	if err != nil {
+		return nil, fmt.Errorf("server: parse server ca cert: %w", err)
+	}
+
+	serverLeafKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, fmt.Errorf("server: generate server leaf key: %w", err)
+	}
+	serverLeafSerial, err := newSerial()
+	if err != nil {
+		return nil, fmt.Errorf("server: generate server leaf serial: %w", err)
+	}
+	serverLeafTmpl := &x509.Certificate{
+		SerialNumber: serverLeafSerial,
 		Subject: pkix.Name{
 			CommonName: "qrrun-origin",
 		},
 		NotBefore:             now.Add(-5 * time.Minute),
 		NotAfter:              now.Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		IsCA:                  true,
 		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
 		DNSNames:              []string{"localhost"},
 	}
-
-	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &priv.PublicKey, priv)
+	serverLeafDer, err := x509.CreateCertificate(rand.Reader, serverLeafTmpl, serverCAParsed, &serverLeafKey.PublicKey, serverCAKey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("server: create tls cert: %w", err)
+		return nil, fmt.Errorf("server: create server leaf cert: %w", err)
+	}
+	serverLeafPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: serverLeafDer})
+	serverLeafKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(serverLeafKey)})
+	serverTLSCert, err := tls.X509KeyPair(serverLeafPEM, serverLeafKeyPEM)
+	if err != nil {
+		return nil, fmt.Errorf("server: load server keypair: %w", err)
 	}
 
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
-	cert, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		return nil, nil, fmt.Errorf("server: load tls keypair: %w", err)
-	}
-
-	return &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}, certPEM, nil
+	return &originTLSArtifacts{
+		config: &tls.Config{
+			Certificates: []tls.Certificate{serverTLSCert},
+			MinVersion:   tls.VersionTLS12,
+		},
+		serverCAPEM: serverCAPEM,
+	}, nil
 }
