@@ -3,6 +3,7 @@
 #
 # Build output
 /qrrun
+/dist
 
 # Binaries for programs and plugins
 *.exe
