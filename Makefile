@@ -1,4 +1,4 @@
-.PHONY: help gvm-setup build test lint vet pre-commit-install pre-commit-run clean
+.PHONY: help gvm-setup build test e2e-url-only lint vet pre-commit-install pre-commit-run clean
 
 .DEFAULT_GOAL := build
 
@@ -27,6 +27,10 @@ build:
 ## test: run all tests
 test:
 	go test ./...
+
+## e2e-url-only: run local --url-only end-to-end test via cloudflared
+e2e-url-only: build
+	bash ./scripts/e2e_url_only.sh
 
 ## lint: run golangci-lint (uses go run fallback when not installed)
 lint:
