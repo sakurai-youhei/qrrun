@@ -76,7 +76,7 @@ Examples:
 		`Mobile runtime to target. Available: pythonista, pythonista2, pythonista3`)
 	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,
 		`Keep serving requests until interrupted. By default qrrun exits after successful delivery and a short quiet period.`)
-	cmd.Flags().DurationVar(&exitQuietPeriod, "exit-quiet-period", app.DefaultExitQuietPeriod,
+	cmd.Flags().DurationVar(&exitQuietPeriod, "quiet-period", app.DefaultExitQuietPeriod,
 		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
 	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
