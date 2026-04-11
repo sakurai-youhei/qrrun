@@ -12,6 +12,6 @@ type Pythonista struct {
 
 // QRCodeURL converts a raw script URL into a Pythonista 3 deep-link URL.
 func (p *Pythonista) QRCodeURL(publicURL string, bearerToken string) string {
-	code := fmt.Sprintf("import requests as r;exec(r.get(%q,headers={'Authorization':'Bearer %s'}).text)", publicURL, bearerToken)
+	code := fmt.Sprintf("exec(__import__(\"requests\").get(%q,headers={\"Authorization\":\"Bearer %s\"}).text)", publicURL, bearerToken)
 	return fmt.Sprintf("%s://?exec=%s", p.Scheme, code)
 }
