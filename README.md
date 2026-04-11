@@ -78,15 +78,6 @@ This project uses Go `1.24.13`.
 make gvm-setup
 ```
 
-Or run directly:
-
-```bash
-gvm install go1.24.13
-gvm use go1.24.13
-```
-
-The expected version is also stored in `.gvmrc`.
-
 ## Release
 
 For release operations (including beta releases), see [AGENTS.md](AGENTS.md).
