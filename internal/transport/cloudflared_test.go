@@ -36,6 +36,15 @@ func TestCloudflaredBuildArgs_WithExtraOptions(t *testing.T) {
 	}
 }
 
+func TestCloudflaredBuildArgs_WithOriginCAPool(t *testing.T) {
+	c := &Cloudflared{OriginCAPoolPath: "/tmp/qrrun-origin-ca.pem"}
+	got := c.buildArgs("https://127.0.0.1:12345")
+	want := []string{"tunnel", "--origin-ca-pool", "/tmp/qrrun-origin-ca.pem", "--url", "https://127.0.0.1:12345"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected args: got %#v, want %#v", got, want)
+	}
+}
+
 func TestCloudflaredBuildArgs_LocalhostURL(t *testing.T) {
 	c := &Cloudflared{ExtraArgs: []string{"--loglevel", "debug"}}
 	got := c.buildArgs("http://127.0.0.1:54321")

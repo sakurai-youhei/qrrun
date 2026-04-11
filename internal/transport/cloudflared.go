@@ -16,11 +16,12 @@ import (
 // Cloudflared uses the cloudflared quick-tunnel feature to expose a local URL.
 // The cloudflared binary must be available on PATH.
 type Cloudflared struct {
-	CommandLog   io.Writer
-	ExtraArgs    []string
-	LogStdout    bool
-	LogStderr    bool
-	LogConfigSet bool
+	CommandLog       io.Writer
+	ExtraArgs        []string
+	OriginCAPoolPath string
+	LogStdout        bool
+	LogStderr        bool
+	LogConfigSet     bool
 }
 
 // tunnelURLRe matches the public URL printed by cloudflared logs.
@@ -153,6 +154,9 @@ func (c *Cloudflared) buildArgs(localURL string) []string {
 	args := []string{"tunnel"}
 	if len(c.ExtraArgs) > 0 {
 		args = append(args, c.ExtraArgs...)
+	}
+	if strings.TrimSpace(c.OriginCAPoolPath) != "" {
+		args = append(args, "--origin-ca-pool", c.OriginCAPoolPath)
 	}
 	return append(args, "--url", localURL)
 }

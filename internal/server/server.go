@@ -5,15 +5,22 @@ package server
 import (
 	"context"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Server is an in-memory single-script HTTP server.
@@ -24,6 +31,8 @@ type Server struct {
 	contentType string
 	requestLog  io.Writer
 	listener    net.Listener
+	tlsConfig   *tls.Config
+	originCAPEM []byte
 	baseURL     string
 	originURL   string
 	cleanup     func()
@@ -46,6 +55,12 @@ func New(scriptBytes []byte, contentType string, bearerToken string, requestLog 
 		requestLog = os.Stdout
 	}
 
+	tlsConfig, caPEM, err := newOriginTLSConfig()
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+
 	scriptID, err := newScriptID()
 	if err != nil {
 		return nil, fmt.Errorf("server: script id: %w", err)
@@ -58,6 +73,8 @@ func New(scriptBytes []byte, contentType string, bearerToken string, requestLog 
 		contentType: contentType,
 		requestLog:  requestLog,
 		listener:    ln,
+		tlsConfig:   tlsConfig,
+		originCAPEM: caPEM,
 		baseURL:     baseURL,
 		originURL:   originURL,
 		cleanup:     cleanup,
@@ -74,6 +91,11 @@ func (s *Server) URL() string {
 // OriginURL returns the local origin URL for cloudflared.
 func (s *Server) OriginURL() string {
 	return s.originURL
+}
+
+// OriginCAPEM returns the PEM-encoded CA certificate used by the local origin.
+func (s *Server) OriginCAPEM() []byte {
+	return append([]byte(nil), s.originCAPEM...)
 }
 
 // ScriptURL returns the full URL for the served script file.
@@ -129,9 +151,10 @@ func (s *Server) Serve(ctx context.Context) error {
 
 	srv := &http.Server{Handler: mux}
 
+	tlsListener := tls.NewListener(s.listener, s.tlsConfig)
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- srv.Serve(s.listener)
+		errCh <- srv.Serve(tlsListener)
 	}()
 
 	select {
@@ -154,4 +177,47 @@ func newScriptID() (string, error) {
 	}
 	// 32 hex chars, extensionless UUID-like identifier suitable for URL path.
 	return hex.EncodeToString(raw), nil
+}
+
+func newOriginTLSConfig() (*tls.Config, []byte, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, fmt.Errorf("server: generate tls key: %w", err)
+	}
+
+	serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serial, err := rand.Int(rand.Reader, serialLimit)
+	if err != nil {
+		return nil, nil, fmt.Errorf("server: generate tls serial: %w", err)
+	}
+
+	now := time.Now().UTC()
+	tmpl := &x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			CommonName: "qrrun-origin",
+		},
+		NotBefore:             now.Add(-5 * time.Minute),
+		NotAfter:              now.Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		DNSNames:              []string{"localhost"},
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &priv.PublicKey, priv)
+	if err != nil {
+		return nil, nil, fmt.Errorf("server: create tls cert: %w", err)
+	}
+
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)})
+	cert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		return nil, nil, fmt.Errorf("server: load tls keypair: %w", err)
+	}
+
+	return &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS12}, certPEM, nil
 }
