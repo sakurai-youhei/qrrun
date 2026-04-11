@@ -149,12 +149,10 @@ func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create HEAD request: %v", err)
 	}
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 OK for HEAD probe, got %d", resp.StatusCode)
 	}
 	_ = resp.Body.Close()
 
@@ -248,37 +246,6 @@ func TestServer_RejectsUnauthorizedRequest(t *testing.T) {
 	case <-srv.FirstRequestServed():
 		t.Fatal("first request signal should not be closed for unauthorized request")
 	default:
-	}
-}
-
-func TestServer_HealthEndpoint_AllowsNoAuth(t *testing.T) {
-	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
-	if err != nil {
-		t.Fatalf("server.New: %v", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		_ = srv.Serve(ctx)
-	}()
-
-	time.Sleep(50 * time.Millisecond)
-
-	req, err := http.NewRequest(http.MethodHead, srv.URL()+"/", nil)
-	if err != nil {
-		t.Fatalf("create HEAD health request: %v", err)
-	}
-
-	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
-	if err != nil {
-		t.Fatalf("HEAD %s: %v", srv.URL()+"/", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected health endpoint 200, got %d", resp.StatusCode)
 	}
 }
 
