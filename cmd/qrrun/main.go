@@ -38,6 +38,7 @@ func newRootCmd() *cobra.Command {
 	var exitQuietPeriod time.Duration
 	var transportStderr bool
 	var transportStdout bool
+	var debug bool
 	var printURL bool
 	var transportOpts string
 
@@ -65,6 +66,7 @@ Examples:
 				ScriptPath:      args[0],
 				KeepServing:     keepServingMode,
 				ExitQuietPeriod: exitQuietPeriod,
+				Debug:           debug,
 				TransportStdout: transportStdout,
 				TransportStderr: transportStderr,
 				PrintURL:        printURL,
@@ -91,6 +93,8 @@ Examples:
 		`Enable transport stderr output to console.`)
 	cmd.Flags().BoolVar(&transportStdout, "transport-stdout", false,
 		`Enable transport stdout output to console.`)
+	cmd.Flags().BoolVar(&debug, "debug", false,
+		`Enable debug logs.`)
 	cmd.Flags().BoolVar(&printURL, "print-url", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
 

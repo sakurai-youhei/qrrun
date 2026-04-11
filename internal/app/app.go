@@ -28,6 +28,7 @@ type Options struct {
 	ScriptPath      string
 	KeepServing     bool
 	ExitQuietPeriod time.Duration
+	Debug           bool
 	TransportStdout bool
 	TransportStderr bool
 	PrintURL        bool
@@ -51,6 +52,7 @@ func Run(opts Options) error {
 	if opts.Output == nil {
 		opts.Output = os.Stdout
 	}
+	statusOutput := io.Writer(os.Stderr)
 	quietPeriod := opts.ExitQuietPeriod
 	if quietPeriod <= 0 {
 		quietPeriod = DefaultExitQuietPeriod
@@ -60,12 +62,11 @@ func Run(opts Options) error {
 	if err != nil {
 		return err
 	}
-	if opts.PrintURL {
-		if cf, ok := t.(*transport.Cloudflared); ok {
-			cf.CommandLog = io.Discard
-		}
-	}
 	if cf, ok := t.(*transport.Cloudflared); ok {
+		if cf.CommandLog == nil {
+			cf.CommandLog = statusOutput
+		}
+		cf.LogCommand = opts.Debug
 		cf.ExtraArgs = append([]string(nil), opts.CloudflaredOpts...)
 		cf.LogStdout = opts.TransportStdout
 		cf.LogStderr = opts.TransportStderr
@@ -91,9 +92,9 @@ func Run(opts Options) error {
 		return fmt.Errorf("generate bearer token: %w", err)
 	}
 
-	requestLog := io.Writer(os.Stdout)
-	if opts.PrintURL {
-		requestLog = io.Discard
+	requestLog := io.Writer(io.Discard)
+	if opts.Debug {
+		requestLog = statusOutput
 	}
 
 	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", bearerToken, requestLog)
@@ -157,7 +158,6 @@ func Run(opts Options) error {
 	if opts.PrintURL {
 		fmt.Fprintln(opts.Output, scriptPublicURL)
 	} else {
-		fmt.Fprintf(opts.Output, "\nScan the QR code below with your phone:\n\n")
 		qrterminal.GenerateWithConfig(scriptPublicURL, qrterminal.Config{
 			Level:     qrterminal.M,
 			Writer:    opts.Output,
@@ -166,9 +166,9 @@ func Run(opts Options) error {
 			QuietZone: 1,
 		})
 		if opts.KeepServing {
-			fmt.Fprintf(opts.Output, "\nKeep-serving mode enabled. Press Ctrl+C to stop.\n")
+			fmt.Fprintf(statusOutput, "\nKeep-serving mode enabled. Press Ctrl+C to stop.\n")
 		} else {
-			fmt.Fprintf(opts.Output, "\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", quietPeriod)
+			fmt.Fprintf(statusOutput, "\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", quietPeriod)
 		}
 	}
 
