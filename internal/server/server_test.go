@@ -16,9 +16,11 @@ import (
 	"github.com/sakurai-youhei/qrrun/internal/server"
 )
 
+const testBearerToken = "test-bearer-token"
+
 func TestServer_ServesScriptFile(t *testing.T) {
 	content := "print('hello')\n"
-	srv, err := server.New([]byte(content), "text/x-python; charset=utf-8", io.Discard)
+	srv, err := server.New([]byte(content), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -36,7 +38,7 @@ func TestServer_ServesScriptFile(t *testing.T) {
 	// Give the server a moment to start.
 	time.Sleep(50 * time.Millisecond)
 
-	resp, err := serverHTTPClient(srv.OriginURL()).Get(srv.ScriptURL())
+	resp, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -59,7 +61,7 @@ func TestServer_ServesScriptFile(t *testing.T) {
 }
 
 func TestServer_URLFormat(t *testing.T) {
-	srv, err := server.New([]byte(""), "text/x-python; charset=utf-8", io.Discard)
+	srv, err := server.New([]byte(""), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -95,7 +97,7 @@ func TestServer_URLFormat(t *testing.T) {
 }
 
 func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
-	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", io.Discard)
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -115,7 +117,7 @@ func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
 	default:
 	}
 
-	resp, err := serverHTTPClient(srv.OriginURL()).Get(srv.ScriptURL())
+	resp, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -129,7 +131,7 @@ func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
 }
 
 func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
-	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", io.Discard)
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -147,6 +149,7 @@ func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create HEAD request: %v", err)
 	}
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
@@ -162,7 +165,7 @@ func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
 
 func TestServer_LogsAllRequests(t *testing.T) {
 	var logs bytes.Buffer
-	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", &logs)
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", testBearerToken, &logs)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -176,7 +179,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if _, err := serverHTTPClient(srv.OriginURL()).Get(srv.ScriptURL()); err != nil {
+	if _, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), testBearerToken, nil); err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
 
@@ -184,6 +187,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create HEAD request: %v", err)
 	}
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
@@ -194,6 +198,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create POST request: %v", err)
 	}
+	req.Header.Set("Authorization", "Bearer "+testBearerToken)
 	resp, err = serverHTTPClient(srv.OriginURL()).Do(req)
 	if err != nil {
 		t.Fatalf("POST %s: %v", srv.ScriptURL(), err)
@@ -210,6 +215,47 @@ func TestServer_LogsAllRequests(t *testing.T) {
 	if !strings.Contains(got, "method=POST") {
 		t.Fatalf("expected POST log, got: %q", got)
 	}
+}
+
+func TestServer_RejectsUnauthorizedRequest(t *testing.T) {
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = srv.Serve(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	resp, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), "wrong-token", nil)
+	if err != nil {
+		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
+	}
+
+	select {
+	case <-srv.FirstRequestServed():
+		t.Fatal("first request signal should not be closed for unauthorized request")
+	default:
+	}
+}
+
+func doRequest(client *http.Client, method, url, bearerToken string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	return client.Do(req)
 }
 
 func serverHTTPClient(originURL string) *http.Client {
