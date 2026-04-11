@@ -1,11 +1,10 @@
-.PHONY: help check-go-version setup-go-gvm checks build test e2e-url-only lint vet pre-commit-install pre-commit-run clean
+.PHONY: help build test checks e2e-url-only lint vet pre-commit-install pre-commit-run clean
 
 .DEFAULT_GOAL := build
 
 BINARY := qrrun
 CMD     := ./cmd/qrrun
 GOLANGCI_LINT_VERSION := v1.64.8
-GO_REQUIRED_VERSION := 1.24.13
 VERSION ?= v0.0.0-dev
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -14,16 +13,6 @@ LDFLAGS := -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)' -X 'main.date
 ## help: show available make targets
 help:
 	@awk '/^## / {desc=substr($$0, 4); next} /^[a-zA-Z0-9_.-]+:/ {if (desc != "") {split($$1, t, ":"); printf "%-16s %s\n", t[1], desc; desc=""}}' $(MAKEFILE_LIST)
-
-## check-go-version: verify the active Go version matches project requirement
-check-go-version:
-	@go version | grep -q "go$(GO_REQUIRED_VERSION)" || { echo "Expected Go $(GO_REQUIRED_VERSION). Run 'make setup-go-gvm' if you use gvm."; exit 1; }
-
-## setup-go-gvm: install and activate the required Go version via gvm
-setup-go-gvm:
-	@test -f "$$HOME/.gvm/scripts/gvm" || { echo "gvm is not installed. See README for install steps."; exit 1; }
-	@bash --noprofile --norc -lc 'source "$$HOME/.gvm/scripts/gvm" && gvm list | grep -q "go$(GO_REQUIRED_VERSION)" || gvm install go$(GO_REQUIRED_VERSION)'
-	@bash --noprofile --norc -lc 'source "$$HOME/.gvm/scripts/gvm" && gvm use go$(GO_REQUIRED_VERSION) --default'
 
 ## build: compile the binary
 build:
