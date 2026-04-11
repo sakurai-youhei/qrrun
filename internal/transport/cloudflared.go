@@ -19,6 +19,7 @@ type Cloudflared struct {
 	CommandLog       io.Writer
 	ExtraArgs        []string
 	OriginCAPoolPath string
+	LogCommand       bool
 	LogStdout        bool
 	LogStderr        bool
 	LogConfigSet     bool
@@ -32,7 +33,9 @@ var tunnelURLRe = regexp.MustCompile(`https://[a-z0-9-]+\.trycloudflare\.com`)
 // subprocess exits unexpectedly.
 func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- string) error {
 	args := c.buildArgs(localURL)
-	fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared %s\n", strings.Join(args, " "))
+	if c.LogCommand {
+		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared %s\n", strings.Join(args, " "))
+	}
 
 	cmd := exec.CommandContext(ctx, "cloudflared", args...)
 
