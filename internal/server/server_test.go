@@ -3,9 +3,10 @@ package server_test
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -37,7 +38,7 @@ func TestServer_ServesScriptFile(t *testing.T) {
 	// Give the server a moment to start.
 	time.Sleep(50 * time.Millisecond)
 
-	resp, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
+	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -65,10 +66,10 @@ func TestServer_URLFormat(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	if !strings.HasPrefix(srv.URL(), "http://127.0.0.1:") {
+	if !strings.HasPrefix(srv.URL(), "https://127.0.0.1:") {
 		t.Errorf("unexpected URL: %q", srv.URL())
 	}
-	if !strings.HasPrefix(srv.OriginURL(), "http://127.0.0.1:") {
+	if !strings.HasPrefix(srv.OriginURL(), "https://127.0.0.1:") {
 		t.Errorf("unexpected OriginURL: %q", srv.OriginURL())
 	}
 
@@ -107,7 +108,7 @@ func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
 	default:
 	}
 
-	resp, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
+	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -140,7 +141,7 @@ func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
 		t.Fatalf("create HEAD request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
+	resp, err := serverHTTPClient(srv).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
 	}
@@ -169,7 +170,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	if _, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), testBearerToken, nil); err != nil {
+	if _, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), testBearerToken, nil); err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
 
@@ -178,7 +179,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 		t.Fatalf("create HEAD request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	resp, err := serverHTTPClient(srv.OriginURL()).Do(req)
+	resp, err := serverHTTPClient(srv).Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
 	}
@@ -189,7 +190,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 		t.Fatalf("create POST request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	resp, err = serverHTTPClient(srv.OriginURL()).Do(req)
+	resp, err = serverHTTPClient(srv).Do(req)
 	if err != nil {
 		t.Fatalf("POST %s: %v", srv.ScriptURL(), err)
 	}
@@ -222,7 +223,7 @@ func TestServer_RejectsUnauthorizedRequest(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
-	resp, err := doRequest(serverHTTPClient(srv.OriginURL()), http.MethodGet, srv.ScriptURL(), "wrong-token", nil)
+	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), "wrong-token", nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -248,15 +249,13 @@ func doRequest(client *http.Client, method, url, bearerToken string, body io.Rea
 	return client.Do(req)
 }
 
-func serverHTTPClient(originURL string) *http.Client {
-	if strings.HasPrefix(originURL, "unix://") {
-		socketPath := strings.TrimPrefix(originURL, "unix://")
-		tr := &http.Transport{
-			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-				return (&net.Dialer{}).DialContext(ctx, "unix", socketPath)
-			},
-		}
-		return &http.Client{Transport: tr}
+func serverHTTPClient(srv *server.Server) *http.Client {
+	pool := x509.NewCertPool()
+	if ok := pool.AppendCertsFromPEM(srv.OriginCAPEM()); !ok {
+		panic("failed to append origin CA cert")
 	}
-	return http.DefaultClient
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{RootCAs: pool},
+	}
+	return &http.Client{Transport: tr}
 }

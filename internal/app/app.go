@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -98,6 +99,27 @@ func Run(opts Options) error {
 	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", bearerToken, requestLog)
 	if err != nil {
 		return err
+	}
+
+	if cf, ok := t.(*transport.Cloudflared); ok {
+		caPEM := srv.OriginCAPEM()
+		if len(caPEM) > 0 {
+			caFile, err := os.CreateTemp("", "qrrun-origin-ca-*.pem")
+			if err != nil {
+				return fmt.Errorf("create origin ca file: %w", err)
+			}
+			defer func() {
+				_ = os.Remove(caFile.Name())
+			}()
+			if _, err := caFile.Write(caPEM); err != nil {
+				_ = caFile.Close()
+				return fmt.Errorf("write origin ca file: %w", err)
+			}
+			if err := caFile.Close(); err != nil {
+				return fmt.Errorf("close origin ca file: %w", err)
+			}
+			cf.OriginCAPoolPath = caFile.Name()
+		}
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -247,20 +269,15 @@ func loadScriptContent(scriptPath string, input io.Reader) ([]byte, error) {
 
 // replaceBase swaps the local base URL in rawURL with publicBase.
 func replaceBase(rawURL, publicBase string) string {
-	// rawURL starts with the local server URL (e.g. "http://127.0.0.1:PORT/…").
-	// We swap the scheme+host+port portion with publicBase.
-	const scheme = "http://"
-	if len(rawURL) < len(scheme) {
+	rawParsed, err := url.Parse(rawURL)
+	if err != nil {
 		return rawURL
 	}
-	// Find end of host:port
-	rest := rawURL[len(scheme):]
-	slashIdx := len(rest)
-	for i, c := range rest {
-		if c == '/' {
-			slashIdx = i
-			break
-		}
+	publicParsed, err := url.Parse(publicBase)
+	if err != nil {
+		return rawURL
 	}
-	return publicBase + rest[slashIdx:]
+	rawParsed.Scheme = publicParsed.Scheme
+	rawParsed.Host = publicParsed.Host
+	return rawParsed.String()
 }

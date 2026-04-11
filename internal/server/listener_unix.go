@@ -14,6 +14,7 @@ func newOriginListener() (net.Listener, string, string, func(), error) {
 	}
 
 	base := "http://" + ln.Addr().String()
+	base = "https://" + ln.Addr().String()
 
 	cleanup := func() {
 		_ = ln.Close()
