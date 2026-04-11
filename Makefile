@@ -5,7 +5,7 @@
 BINARY := qrrun
 CMD     := ./cmd/qrrun
 GOLANGCI_LINT_VERSION := v1.64.8
-VERSION ?= v0.1.0-alpha.0
+VERSION ?= v0.0.0-dev
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)' -X 'main.date=$(DATE)'
