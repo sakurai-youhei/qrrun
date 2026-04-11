@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"bytes"
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io"
