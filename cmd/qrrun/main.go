@@ -44,15 +44,14 @@ func newRootCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "qrrun [flags] <script|-]",
-		Short: "Tunnel local code. Run via QR.",
-		Long: `qrrun serves a local script over a secure tunnel and displays a QR code.
+		Short: "tunnel local scripts and run via QR",
+		Long: `qrrun serves a local script through a secure tunnel and prints a QR code.
 
-Scan the QR code with your mobile device to open the script in the configured
-runtime (e.g. Pythonista 3 on iOS).
+scan the QR code to open the script in the selected runtime.
 
 Prerequisites:
-	cloudflared must be installed and available on PATH.
-	qrrun uses Cloudflare Quick Tunnels (trycloudflare.com).
+	cloudflared must be installed and available on PATH
+	qrrun uses Cloudflare Quick Tunnels (trycloudflare.com)
 
 Examples:
 	qrrun hello.py
@@ -80,23 +79,23 @@ Examples:
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
 	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,
-		`Keep serving requests until interrupted. By default qrrun exits after successful delivery and a short quiet period.`)
+		`keep serving requests until interrupted`)
 	cmd.Flags().DurationVar(&exitQuietPeriod, "quiet-period", app.DefaultExitQuietPeriod,
-		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
+		`quiet period before exit`)
 	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
-		`Mobile runtime to target. Available: pythonista, pythonista2, pythonista3`)
+		`target runtime`)
 	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
-		`Tunnel transport to use. Available: cloudflared`)
+		`tunnel transport`)
 	cmd.Flags().StringVar(&transportOpts, "transport-opts", "",
-		`Extra options passed to the selected transport command (example: --transport-opts='--loglevel debug').`)
+		`extra args for the transport command`)
 	cmd.Flags().BoolVar(&transportStderr, "transport-stderr", false,
-		`Enable transport stderr output to console.`)
+		`show transport stderr on console`)
 	cmd.Flags().BoolVar(&transportStdout, "transport-stdout", false,
-		`Enable transport stdout output to console.`)
+		`show transport stdout on console`)
 	cmd.Flags().BoolVar(&debug, "debug", false,
-		`Enable debug logs.`)
+		`show debug logs`)
 	cmd.Flags().BoolVar(&printURL, "print-url", false,
-		`Print only the runtime URL as a single line (no QR code or status text).`)
+		`print only the runtime URL`)
 
 	return cmd
 }
