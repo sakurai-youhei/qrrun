@@ -53,3 +53,7 @@ gvm use go1.24.13
 ```
 
 The expected version is also stored in `.gvmrc`.
+
+## Release
+
+For release operations (including beta releases), see [AGENTS.md](AGENTS.md).
