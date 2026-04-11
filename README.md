@@ -31,19 +31,7 @@ By default, qrrun generates a QR code for opening and running your script in Pyt
 
 By default, qrrun exits after successful content delivery and a short quiet period (`500ms`).
 
-You can tune this with `--exit-quiet-period`:
-
-```bash
-qrrun --exit-quiet-period 300ms hello.py
-```
-
-Keep serving requests until interrupted:
-
-```bash
-qrrun --keep-serving hello.py
-```
-
-Each received request is logged to the console (method/path/remote address), regardless of HTTP verb.
+For more options and behavior details, run `qrrun --help`.
 
 ## Development Setup (gvm)
 
@@ -65,3 +53,7 @@ gvm use go1.24.13
 ```
 
 The expected version is also stored in `.gvmrc`.
+
+## Release
+
+For release operations (including beta releases), see [AGENTS.md](AGENTS.md).
