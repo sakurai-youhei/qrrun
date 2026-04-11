@@ -62,16 +62,23 @@ Install system-wide:
 curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd v0.1.0-beta.1 machine
 ```
 
-## Development Setup (gvm)
+## Development Setup
 
 This project uses Go `1.24.13`.
 
-1. Install gvm (Go Version Manager) by following the [official installation guide](https://github.com/moovweb/gvm?tab=readme-ov-file#installing).
+1. Set up your Go environment with version `1.24.13`.
 
-2. Install the required Go version and activate it:
+2. If you use gvm, follow the [official installation guide](https://github.com/moovweb/gvm?tab=readme-ov-file#installing), then install and activate the required Go version:
 
 ```bash
-make setup-go-gvm
+gvm install go1.24.13
+gvm use go1.24.13 --default
+```
+
+3. Run CI-like checks:
+
+```bash
+make checks
 ```
 
 ## Release
