@@ -1,6 +1,7 @@
 package runtime_test
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 
@@ -56,9 +57,13 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 			t.Errorf("expected %q prefix for %q, got %q", prefix, tc.name, got)
 		}
 
-		execCode := strings.TrimPrefix(got, prefix)
-		if execCode == "" {
+		rawExec := strings.TrimPrefix(got, prefix)
+		if rawExec == "" {
 			t.Errorf("expected exec query parameter for %q, got %q", tc.name, got)
+		}
+		execCode, err := url.QueryUnescape(rawExec)
+		if err != nil {
+			t.Fatalf("failed to decode exec code for %q: %v (raw: %q)", tc.name, err, rawExec)
 		}
 		if !strings.HasPrefix(execCode, "exec(__import__(\"requests\").get(") {
 			t.Errorf("expected single-expression __import__ prefix in exec code for %q, got %q", tc.name, execCode)
@@ -75,8 +80,14 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if !strings.Contains(execCode, rawURL) {
 			t.Errorf("expected raw URL in exec code for %q, got %q", tc.name, execCode)
 		}
-		if strings.Contains(execCode, "%") {
-			t.Errorf("expected unencoded exec code for %q, got %q", tc.name, execCode)
+		if !strings.Contains(rawExec, "%") {
+			t.Errorf("expected encoded exec query for %q, got %q", tc.name, rawExec)
+		}
+		if strings.Contains(rawExec, "+") {
+			t.Errorf("expected spaces to remain literal spaces (no '+') for %q, got %q", tc.name, rawExec)
+		}
+		if !strings.Contains(rawExec, " ") {
+			t.Errorf("expected raw exec query to contain a literal space for %q, got %q", tc.name, rawExec)
 		}
 	}
 }
