@@ -154,11 +154,6 @@ func (c *Cloudflared) buildArgs(localURL string) []string {
 	if len(c.ExtraArgs) > 0 {
 		args = append(args, c.ExtraArgs...)
 	}
-	if strings.HasPrefix(localURL, "unix://") {
-		socketPath := strings.TrimPrefix(localURL, "unix://")
-		// cloudflared expects --unix-socket instead of --url for unix origins.
-		return append(args, "--unix-socket", socketPath)
-	}
 	return append(args, "--url", localURL)
 }
 
