@@ -16,10 +16,10 @@ import (
 // Cloudflared uses the cloudflared quick-tunnel feature to expose a local URL.
 // The cloudflared binary must be available on PATH.
 type Cloudflared struct {
-	CommandLog io.Writer
-	ExtraArgs  []string
-	LogStdout  bool
-	LogStderr  bool
+	CommandLog   io.Writer
+	ExtraArgs    []string
+	LogStdout    bool
+	LogStderr    bool
 	LogConfigSet bool
 }
 
