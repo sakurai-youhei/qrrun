@@ -26,15 +26,8 @@ var tunnelURLRe = regexp.MustCompile(`https://[a-z0-9-]+\.trycloudflare\.com`)
 // resulting public URL to urlCh.  It returns when ctx is cancelled or the
 // subprocess exits unexpectedly.
 func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- string) error {
-	args := []string{"tunnel", "--loglevel", "debug"}
-	if strings.HasPrefix(localURL, "unix://") {
-		socketPath := strings.TrimPrefix(localURL, "unix://")
-		args = append(args, "--url", "http://localhost", "--unix-socket", socketPath)
-		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --loglevel debug --url http://localhost --unix-socket %s\n", socketPath)
-	} else {
-		args = append(args, "--url", localURL)
-		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --loglevel debug --url %s\n", localURL)
-	}
+	args := c.buildArgs(localURL)
+	fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared %s\n", strings.Join(args, " "))
 
 	cmd := exec.CommandContext(ctx, "cloudflared", args...)
 
@@ -148,6 +141,16 @@ waitURL:
 		return fmt.Errorf("cloudflared: quick tunnel URL not found in output\ncloudflared output:\n%s", strings.TrimSpace(outputCapture.String()))
 	}
 	return nil
+}
+
+func (c *Cloudflared) buildArgs(localURL string) []string {
+	args := []string{"tunnel", "--loglevel", "debug"}
+	if strings.HasPrefix(localURL, "unix://") {
+		socketPath := strings.TrimPrefix(localURL, "unix://")
+		// Use unix socket URL directly so cloudflared does not fall back to localhost:80.
+		return append(args, "--url", "unix:"+socketPath)
+	}
+	return append(args, "--url", localURL)
 }
 
 func (c *Cloudflared) commandLogWriter() io.Writer {
