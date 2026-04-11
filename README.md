@@ -24,7 +24,7 @@ qrrun hello.py
 Run from stdin (`-`):
 
 ```bash
-echo "print('hello from stdin')" | qrrun -
+echo "print('Hello, QRrun!')" | qrrun -
 ```
 
 By default, QRrun generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
