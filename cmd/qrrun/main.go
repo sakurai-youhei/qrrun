@@ -37,7 +37,7 @@ func newRootCmd() *cobra.Command {
 	var keepServing bool
 	var exitQuietPeriod time.Duration
 	var urlOnly bool
-	var cloudflaredOpts string
+	var transportOpts string
 
 	cmd := &cobra.Command{
 		Use:   "qrrun [flags] <script|-]",
@@ -64,7 +64,7 @@ Examples:
 				KeepServing:     keepServingMode,
 				ExitQuietPeriod: exitQuietPeriod,
 				URLOnly:         urlOnly,
-				CloudflaredOpts: strings.Fields(cloudflaredOpts),
+				CloudflaredOpts: strings.Fields(transportOpts),
 			})
 		},
 		SilenceUsage: true,
@@ -73,18 +73,18 @@ Examples:
 	cmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
 	cmd.SetVersionTemplate("{{.Version}}\n")
 
-	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
-		`Tunnel transport to use. Available: cloudflared`)
-	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
-		`Mobile runtime to target. Available: pythonista, pythonista2, pythonista3`)
 	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,
 		`Keep serving requests until interrupted. By default qrrun exits after successful delivery and a short quiet period.`)
 	cmd.Flags().DurationVar(&exitQuietPeriod, "quiet-period", app.DefaultExitQuietPeriod,
 		`Quiet period before exit in default mode (examples: 300ms, 1s). Ignored when --keep-serving is enabled.`)
+	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
+		`Mobile runtime to target. Available: pythonista, pythonista2, pythonista3`)
+	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
+		`Tunnel transport to use. Available: cloudflared`)
+	cmd.Flags().StringVar(&transportOpts, "transport-opts", "",
+		`Extra options passed to the selected transport command (example: --transport-opts='--loglevel debug').`)
 	cmd.Flags().BoolVar(&urlOnly, "url-only", false,
 		`Print only the runtime URL as a single line (no QR code or status text).`)
-	cmd.Flags().StringVar(&cloudflaredOpts, "cloudflared-opts", "",
-		`Extra options passed to "cloudflared tunnel" (example: --cloudflared-opts='--loglevel debug').`)
 
 	return cmd
 }
