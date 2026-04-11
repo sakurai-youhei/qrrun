@@ -45,6 +45,20 @@ qrrun --keep-serving hello.py
 
 Each received request is logged to the console (method/path/remote address), regardless of HTTP verb.
 
+## Installation
+
+Install from GitHub Releases using the maintained installer script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash
+```
+
+Install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash -s -- v0.1.0
+```
+
 ## Development Setup (gvm)
 
 This project uses Go `1.24.13`.
