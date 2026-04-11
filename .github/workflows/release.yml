@@ -81,6 +81,13 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install packaging tools
+        if: matrix.goos == 'linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+
       - name: Build binary and package
         shell: bash
         env:
@@ -112,12 +119,97 @@ jobs:
             tar -C dist -czf "dist/${BASE}.tar.gz" "${BIN}"
           fi
 
+          if [ "$GOOS" = "linux" ]; then
+            DEB_ARCH="$GOARCH"
+            DEB_VERSION="${VERSION#v}"
+            DEB_BASE="qrrun_${DEB_VERSION}_${DEB_ARCH}"
+            PKG_ROOT="dist/${DEB_BASE}"
+
+            mkdir -p "${PKG_ROOT}/DEBIAN" "${PKG_ROOT}/usr/bin"
+            install -m 0755 "dist/${BIN}" "${PKG_ROOT}/usr/bin/qrrun"
+
+            cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
+Package: qrrun
+Version: ${DEB_VERSION}
+Section: utils
+Priority: optional
+Architecture: ${DEB_ARCH}
+Maintainer: qrrun maintainers
+Description: Tunnel local code and run it via QR
+EOF
+
+            dpkg-deb --build --root-owner-group "${PKG_ROOT}" "dist/${DEB_BASE}.deb"
+
+            RPM_ARCH="$GOARCH"
+            if [ "$GOARCH" = "amd64" ]; then
+              RPM_ARCH="x86_64"
+            elif [ "$GOARCH" = "arm64" ]; then
+              RPM_ARCH="aarch64"
+            fi
+            RPM_VERSION="${DEB_VERSION%%-*}"
+            RPM_RELEASE="1"
+            if [ "${DEB_VERSION}" != "${RPM_VERSION}" ]; then
+              RPM_RELEASE="0.$(echo "${DEB_VERSION#${RPM_VERSION}-}" | tr -c '[:alnum:].' '.')"
+            fi
+
+            RPM_TOPDIR="$PWD/dist/rpmbuild"
+            mkdir -p "${RPM_TOPDIR}/BUILD" "${RPM_TOPDIR}/RPMS" "${RPM_TOPDIR}/SOURCES" "${RPM_TOPDIR}/SPECS" "${RPM_TOPDIR}/SRPMS"
+            cp "dist/${BIN}" "${RPM_TOPDIR}/SOURCES/qrrun"
+
+            cat > "${RPM_TOPDIR}/SPECS/qrrun.spec" <<EOF
+Name:           qrrun
+Version:        ${RPM_VERSION}
+Release:        ${RPM_RELEASE}
+Summary:        Tunnel local code and run it via QR
+License:        MIT
+BuildArch:      ${RPM_ARCH}
+Source0:        qrrun
+
+%description
+Tunnel local code and run it via QR.
+
+%prep
+
+%build
+
+%install
+mkdir -p %{buildroot}/usr/bin
+install -m 0755 %{SOURCE0} %{buildroot}/usr/bin/qrrun
+
+%files
+/usr/bin/qrrun
+
+%changelog
+* $(date -u '+%a %b %d %Y') qrrun maintainers - ${DEB_VERSION}
+- Automated release build
+EOF
+
+            rpmbuild --define "_topdir ${RPM_TOPDIR}" -bb "${RPM_TOPDIR}/SPECS/qrrun.spec"
+            find "${RPM_TOPDIR}/RPMS" -type f -name '*.rpm' -exec cp {} dist/ \;
+          fi
+
       - name: Upload packaged artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*.tar.gz
           if-no-files-found: ignore
+
+      - name: Upload packaged artifact (deb)
+        if: matrix.goos == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+      - name: Upload packaged artifact (rpm)
+        if: matrix.goos == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.goos }}-${{ matrix.goarch }}-rpm
+          path: dist/*.rpm
+          if-no-files-found: error
 
       - name: Upload packaged artifact (zip)
         if: matrix.archive == 'zip'
@@ -149,3 +241,5 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.zip
+            dist/*.deb
+            dist/*.rpm
