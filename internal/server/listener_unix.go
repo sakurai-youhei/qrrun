@@ -13,8 +13,7 @@ func newOriginListener() (net.Listener, string, string, func(), error) {
 		return nil, "", "", nil, fmt.Errorf("server: listen: %w", err)
 	}
 
-	base := "http://" + ln.Addr().String()
-	base = "https://" + ln.Addr().String()
+	base := "https://" + ln.Addr().String()
 
 	cleanup := func() {
 		_ = ln.Close()
