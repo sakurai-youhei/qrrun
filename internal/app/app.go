@@ -11,10 +11,11 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/mdp/qrterminal/v3"
+	"rsc.io/qr"
 
 	"github.com/sakurai-youhei/qrrun/internal/runtime"
 	"github.com/sakurai-youhei/qrrun/internal/server"
@@ -158,13 +159,9 @@ func Run(opts Options) error {
 	if opts.PrintURL {
 		fmt.Fprintln(opts.Output, scriptPublicURL)
 	} else {
-		qrterminal.GenerateWithConfig(scriptPublicURL, qrterminal.Config{
-			Level:     qrterminal.M,
-			Writer:    opts.Output,
-			BlackChar: qrterminal.BLACK,
-			WhiteChar: qrterminal.WHITE,
-			QuietZone: 1,
-		})
+		if err := renderCompactQRCode(opts.Output, scriptPublicURL); err != nil {
+			return fmt.Errorf("render qr: %w", err)
+		}
 		if opts.KeepServing {
 			fmt.Fprintf(statusOutput, "\nKeep-serving mode enabled. Press Ctrl+C to stop.\n")
 		} else {
@@ -280,4 +277,48 @@ func replaceBase(rawURL, publicBase string) string {
 	rawParsed.Scheme = publicParsed.Scheme
 	rawParsed.Host = publicParsed.Host
 	return rawParsed.String()
+}
+
+func renderCompactQRCode(w io.Writer, content string) error {
+	code, err := qr.Encode(content, qr.M)
+	if err != nil {
+		return err
+	}
+
+	const quietZone = 1
+	size := code.Size + 2*quietZone
+
+	for y := 0; y < size; y += 2 {
+		var line strings.Builder
+		line.Grow(size)
+		for x := 0; x < size; x++ {
+			top := qrBlackAt(code, x-quietZone, y-quietZone)
+			bottom := qrBlackAt(code, x-quietZone, y+1-quietZone)
+			line.WriteRune(compactBlock(top, bottom))
+		}
+		if _, err := fmt.Fprintln(w, line.String()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func qrBlackAt(code *qr.Code, x, y int) bool {
+	if x < 0 || y < 0 || x >= code.Size || y >= code.Size {
+		return false
+	}
+	return code.Black(x, y)
+}
+
+func compactBlock(top, bottom bool) rune {
+	switch {
+	case top && bottom:
+		return '█'
+	case top:
+		return '▀'
+	case bottom:
+		return '▄'
+	default:
+		return ' '
+	}
 }
