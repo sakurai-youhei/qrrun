@@ -45,13 +45,13 @@ func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "qrrun [flags] <script|-]",
 		Short: "tunnel local scripts and run via QR",
-		Long: `qrrun serves a local script through a secure tunnel and prints a QR code.
+		Long: `QRrun serves a local script through a secure tunnel and prints a QR code.
 
 scan the QR code to open the script in the selected runtime.
 
 Prerequisites:
 	cloudflared must be installed and available on PATH
-	qrrun uses Cloudflare Quick Tunnels (trycloudflare.com)
+	QRrun uses Cloudflare Quick Tunnels (trycloudflare.com)
 
 Examples:
 	qrrun hello.py

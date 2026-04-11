@@ -21,7 +21,7 @@ import (
 	"github.com/sakurai-youhei/qrrun/internal/transport"
 )
 
-// Options holds the configuration for a single qrrun invocation.
+// Options holds the configuration for a single QRrun invocation.
 type Options struct {
 	TransportName   string
 	RuntimeName     string
@@ -39,7 +39,7 @@ type Options struct {
 
 const DefaultExitQuietPeriod = 500 * time.Millisecond
 
-// Run performs the full qrrun workflow:
+// Run performs the full QRrun workflow:
 //  1. Validates options and resolves the transport / runtime.
 //  2. Starts a local HTTP server to serve the script.
 //  3. Starts the tunnel via the chosen transport.
@@ -168,7 +168,7 @@ func Run(opts Options) error {
 		if opts.KeepServing {
 			fmt.Fprintf(statusOutput, "\nKeep-serving mode enabled. Press Ctrl+C to stop.\n")
 		} else {
-			fmt.Fprintf(statusOutput, "\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", quietPeriod)
+			fmt.Fprintf(statusOutput, "\nDefault mode: QRrun exits after the last successful content delivery (quiet period: %s).\n", quietPeriod)
 		}
 	}
 
