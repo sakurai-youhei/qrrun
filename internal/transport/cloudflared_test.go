@@ -39,7 +39,7 @@ func TestCloudflaredBuildArgs_WithExtraOptions(t *testing.T) {
 func TestCloudflaredBuildArgs_UnixOrigin(t *testing.T) {
 	c := &Cloudflared{ExtraArgs: []string{"--loglevel", "debug"}}
 	got := c.buildArgs("unix:///tmp/qrrun.sock")
-	want := []string{"tunnel", "--loglevel", "debug", "--url", "unix:/tmp/qrrun.sock"}
+	want := []string{"tunnel", "--loglevel", "debug", "--url", "unix:///tmp/qrrun.sock"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unexpected args: got %#v, want %#v", got, want)
 	}

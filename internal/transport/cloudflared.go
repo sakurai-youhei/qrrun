@@ -150,9 +150,8 @@ func (c *Cloudflared) buildArgs(localURL string) []string {
 		args = append(args, c.ExtraArgs...)
 	}
 	if strings.HasPrefix(localURL, "unix://") {
-		socketPath := strings.TrimPrefix(localURL, "unix://")
-		// Use unix socket URL directly so cloudflared does not fall back to localhost:80.
-		return append(args, "--url", "unix:"+socketPath)
+		// Keep unix URL as-is (unix:///path) to avoid it being interpreted as http://unix:/path.
+		return append(args, "--url", localURL)
 	}
 	return append(args, "--url", localURL)
 }
