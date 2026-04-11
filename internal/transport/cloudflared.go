@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -13,7 +14,9 @@ import (
 
 // Cloudflared uses the cloudflared quick-tunnel feature to expose a local URL.
 // The cloudflared binary must be available on PATH.
-type Cloudflared struct{}
+type Cloudflared struct {
+	CommandLog io.Writer
+}
 
 // tunnelURLRe matches the public URL printed by cloudflared logs.
 var tunnelURLRe = regexp.MustCompile(`https://[a-z0-9-]+\.trycloudflare\.com`)
@@ -26,10 +29,10 @@ func (c *Cloudflared) Expose(ctx context.Context, localURL string, urlCh chan<- 
 	if strings.HasPrefix(localURL, "unix://") {
 		socketPath := strings.TrimPrefix(localURL, "unix://")
 		args = append(args, "--url", "http://localhost", "--unix-socket", socketPath)
-		fmt.Printf("transport command: cloudflared tunnel --url http://localhost --unix-socket %s\n", socketPath)
+		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --url http://localhost --unix-socket %s\n", socketPath)
 	} else {
 		args = append(args, "--url", localURL)
-		fmt.Printf("transport command: cloudflared tunnel --url %s\n", localURL)
+		fmt.Fprintf(c.commandLogWriter(), "transport command: cloudflared tunnel --url %s\n", localURL)
 	}
 
 	cmd := exec.CommandContext(ctx, "cloudflared", args...)
@@ -118,4 +121,11 @@ waitURL:
 		return fmt.Errorf("cloudflared: quick tunnel URL not found in output")
 	}
 	return nil
+}
+
+func (c *Cloudflared) commandLogWriter() io.Writer {
+	if c.CommandLog == nil {
+		return os.Stdout
+	}
+	return c.CommandLog
 }

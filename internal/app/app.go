@@ -28,6 +28,7 @@ type Options struct {
 	ScriptPath      string
 	KeepServing     bool
 	ExitQuietPeriod time.Duration
+	URLOnly         bool
 	Input           io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
 	Output          io.Writer // destination for the QR code; defaults to os.Stdout
 }
@@ -56,6 +57,11 @@ func Run(opts Options) error {
 	if err != nil {
 		return err
 	}
+	if opts.URLOnly {
+		if cf, ok := t.(*transport.Cloudflared); ok {
+			cf.CommandLog = io.Discard
+		}
+	}
 
 	rt, err := runtime.New(opts.RuntimeName)
 	if err != nil {
@@ -72,7 +78,12 @@ func Run(opts Options) error {
 		return fmt.Errorf("generate bearer token: %w", err)
 	}
 
-	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", bearerToken, os.Stdout)
+	requestLog := io.Writer(os.Stdout)
+	if opts.URLOnly {
+		requestLog = io.Discard
+	}
+
+	srv, err := server.New(scriptBytes, "text/x-python; charset=utf-8", bearerToken, requestLog)
 	if err != nil {
 		return err
 	}
@@ -113,18 +124,22 @@ func Run(opts Options) error {
 	}
 	scriptPublicURL := rt.QRCodeURL(rawScriptPublicURL, bearerToken)
 
-	fmt.Fprintf(opts.Output, "\nScan the QR code below with your phone:\n\n")
-	qrterminal.GenerateWithConfig(scriptPublicURL, qrterminal.Config{
-		Level:     qrterminal.M,
-		Writer:    opts.Output,
-		BlackChar: qrterminal.BLACK,
-		WhiteChar: qrterminal.WHITE,
-		QuietZone: 1,
-	})
-	if opts.KeepServing {
-		fmt.Fprintf(opts.Output, "\nURL: %s\n\nKeep-serving mode enabled. Press Ctrl+C to stop.\n", scriptPublicURL)
+	if opts.URLOnly {
+		fmt.Fprintln(opts.Output, scriptPublicURL)
 	} else {
-		fmt.Fprintf(opts.Output, "\nURL: %s\n\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", scriptPublicURL, quietPeriod)
+		fmt.Fprintf(opts.Output, "\nScan the QR code below with your phone:\n\n")
+		qrterminal.GenerateWithConfig(scriptPublicURL, qrterminal.Config{
+			Level:     qrterminal.M,
+			Writer:    opts.Output,
+			BlackChar: qrterminal.BLACK,
+			WhiteChar: qrterminal.WHITE,
+			QuietZone: 1,
+		})
+		if opts.KeepServing {
+			fmt.Fprintf(opts.Output, "\nURL: %s\n\nKeep-serving mode enabled. Press Ctrl+C to stop.\n", scriptPublicURL)
+		} else {
+			fmt.Fprintf(opts.Output, "\nURL: %s\n\nDefault mode: qrrun exits after the last successful content delivery (quiet period: %s).\n", scriptPublicURL, quietPeriod)
+		}
 	}
 
 	if !opts.KeepServing {
