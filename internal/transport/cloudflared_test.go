@@ -27,17 +27,17 @@ func TestTunnelURLRe_NoMatch(t *testing.T) {
 	}
 }
 
-func TestCloudflaredBuildArgs_TCPOrigin(t *testing.T) {
-	c := &Cloudflared{}
-	got := c.buildArgs("http://127.0.0.1:8080")
-	want := []string{"tunnel", "--loglevel", "debug", "--url", "http://127.0.0.1:8080"}
+func TestCloudflaredBuildArgs_WithExtraOptions(t *testing.T) {
+	c := &Cloudflared{ExtraArgs: []string{"--loglevel", "debug"}}
+	got := c.buildArgs("http://127.0.0.1:12345")
+	want := []string{"tunnel", "--loglevel", "debug", "--url", "http://127.0.0.1:12345"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unexpected args: got %#v, want %#v", got, want)
 	}
 }
 
 func TestCloudflaredBuildArgs_UnixOrigin(t *testing.T) {
-	c := &Cloudflared{}
+	c := &Cloudflared{ExtraArgs: []string{"--loglevel", "debug"}}
 	got := c.buildArgs("unix:///tmp/qrrun.sock")
 	want := []string{"tunnel", "--loglevel", "debug", "--url", "unix:/tmp/qrrun.sock"}
 	if !reflect.DeepEqual(got, want) {

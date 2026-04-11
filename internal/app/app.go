@@ -28,6 +28,7 @@ type Options struct {
 	KeepServing     bool
 	ExitQuietPeriod time.Duration
 	URLOnly         bool
+	CloudflaredOpts []string
 	Input           io.Reader // source for script content when ScriptPath is "-"; defaults to os.Stdin
 	Output          io.Writer // destination for the QR code; defaults to os.Stdout
 }
@@ -60,6 +61,9 @@ func Run(opts Options) error {
 		if cf, ok := t.(*transport.Cloudflared); ok {
 			cf.CommandLog = io.Discard
 		}
+	}
+	if cf, ok := t.(*transport.Cloudflared); ok {
+		cf.ExtraArgs = append([]string(nil), opts.CloudflaredOpts...)
 	}
 
 	rt, err := runtime.New(opts.RuntimeName)

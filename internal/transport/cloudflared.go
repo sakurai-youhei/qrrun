@@ -17,6 +17,7 @@ import (
 // The cloudflared binary must be available on PATH.
 type Cloudflared struct {
 	CommandLog io.Writer
+	ExtraArgs  []string
 }
 
 // tunnelURLRe matches the public URL printed by cloudflared logs.
@@ -144,7 +145,10 @@ waitURL:
 }
 
 func (c *Cloudflared) buildArgs(localURL string) []string {
-	args := []string{"tunnel", "--loglevel", "debug"}
+	args := []string{"tunnel"}
+	if len(c.ExtraArgs) > 0 {
+		args = append(args, c.ExtraArgs...)
+	}
 	if strings.HasPrefix(localURL, "unix://") {
 		socketPath := strings.TrimPrefix(localURL, "unix://")
 		// Use unix socket URL directly so cloudflared does not fall back to localhost:80.
