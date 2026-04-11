@@ -120,72 +120,9 @@ jobs:
           fi
 
           if [ "$GOOS" = "linux" ]; then
-            DEB_ARCH="$GOARCH"
-            DEB_VERSION="${VERSION#v}"
-            DEB_BASE="qrrun_${DEB_VERSION}_${DEB_ARCH}"
-            PKG_ROOT="dist/${DEB_BASE}"
-
-            mkdir -p "${PKG_ROOT}/DEBIAN" "${PKG_ROOT}/usr/bin"
-            install -m 0755 "dist/${BIN}" "${PKG_ROOT}/usr/bin/qrrun"
-
-            cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
-Package: qrrun
-Version: ${DEB_VERSION}
-Section: utils
-Priority: optional
-Architecture: ${DEB_ARCH}
-Maintainer: qrrun maintainers
-Description: Tunnel local code and run it via QR
-EOF
-
-            dpkg-deb --build --root-owner-group "${PKG_ROOT}" "dist/${DEB_BASE}.deb"
-
-            RPM_ARCH="$GOARCH"
-            if [ "$GOARCH" = "amd64" ]; then
-              RPM_ARCH="x86_64"
-            elif [ "$GOARCH" = "arm64" ]; then
-              RPM_ARCH="aarch64"
-            fi
-            RPM_VERSION="${DEB_VERSION%%-*}"
-            RPM_RELEASE="1"
-            if [ "${DEB_VERSION}" != "${RPM_VERSION}" ]; then
-              RPM_RELEASE="0.$(echo "${DEB_VERSION#${RPM_VERSION}-}" | tr -c '[:alnum:].' '.')"
-            fi
-
-            RPM_TOPDIR="$PWD/dist/rpmbuild"
-            mkdir -p "${RPM_TOPDIR}/BUILD" "${RPM_TOPDIR}/RPMS" "${RPM_TOPDIR}/SOURCES" "${RPM_TOPDIR}/SPECS" "${RPM_TOPDIR}/SRPMS"
-            cp "dist/${BIN}" "${RPM_TOPDIR}/SOURCES/qrrun"
-
-            cat > "${RPM_TOPDIR}/SPECS/qrrun.spec" <<EOF
-Name:           qrrun
-Version:        ${RPM_VERSION}
-Release:        ${RPM_RELEASE}
-Summary:        Tunnel local code and run it via QR
-License:        MIT
-BuildArch:      ${RPM_ARCH}
-Source0:        qrrun
-
-%description
-Tunnel local code and run it via QR.
-
-%prep
-
-%build
-
-%install
-mkdir -p %{buildroot}/usr/bin
-install -m 0755 %{SOURCE0} %{buildroot}/usr/bin/qrrun
-
-%files
-/usr/bin/qrrun
-
-%changelog
-* $(date -u '+%a %b %d %Y') qrrun maintainers - ${DEB_VERSION}
-- Automated release build
-EOF
-
-            rpmbuild --define "_topdir ${RPM_TOPDIR}" -bb "${RPM_TOPDIR}/SPECS/qrrun.spec"
-            find "${RPM_TOPDIR}/RPMS" -type f -name '*.rpm' -exec cp {} dist/ \;
+            export VERSION GOOS GOARCH BIN
+            bash ./scripts/release_package_deb.sh
+            bash ./scripts/release_package_rpm.sh
           fi
 
       - name: Upload packaged artifact
@@ -253,24 +190,7 @@ EOF
           GOARCH: ${{ matrix.goarch }}
           WIX_ARCH: ${{ matrix.wix_arch }}
         run: |
-          $ErrorActionPreference = 'Stop'
-          $date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-          $commit = "${env:GITHUB_SHA}".Substring(0,7)
-          $base = "qrrun_${env:VERSION}_windows_${env:GOARCH}"
-
-          New-Item -ItemType Directory -Path dist -Force | Out-Null
-
-          $env:CGO_ENABLED = "0"
-          $env:GOOS = "windows"
-          go build -trimpath -ldflags "-s -w -X 'main.version=${env:VERSION}' -X 'main.commit=${commit}' -X 'main.date=${date}'" -o "dist/${base}.exe" ./cmd/qrrun
-
-          $productVersion = [regex]::Match($env:VERSION, '^[vV]?(\d+\.\d+\.\d+)').Groups[1].Value
-          if ([string]::IsNullOrWhiteSpace($productVersion)) {
-            throw "Tag '$env:VERSION' must start with SemVer core (e.g. v1.2.3) for MSI versioning"
-          }
-
-          candle -nologo -arch $env:WIX_ARCH -dBinarySource="dist/${base}.exe" -dProductVersion=$productVersion -out "dist/${base}.wixobj" packaging/windows/qrrun.wxs
-          light -nologo -ext WixUIExtension -out "dist/${base}.msi" "dist/${base}.wixobj"
+          ./scripts/release_build_windows_msi.ps1
 
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
@@ -299,48 +219,7 @@ EOF
           VERSION: ${{ needs.guard-main.outputs.version }}
           REPO: ${{ github.repository }}
         run: |
-          set -euo pipefail
-
-          FORMULA_VERSION="${VERSION#v}"
-          DARWIN_AMD64="qrrun_${VERSION}_darwin_amd64.tar.gz"
-          DARWIN_ARM64="qrrun_${VERSION}_darwin_arm64.tar.gz"
-
-          SHA_AMD64="$(sha256sum "dist/${DARWIN_AMD64}" | awk '{print $1}')"
-          SHA_ARM64="$(sha256sum "dist/${DARWIN_ARM64}" | awk '{print $1}')"
-
-          mkdir -p dist/homebrew
-
-          cat > dist/homebrew/qrrun.rb <<EOF
-class Qrrun < Formula
-  desc "Tunnel local code and run it via QR"
-  homepage "https://github.com/${REPO}"
-  version "${FORMULA_VERSION}"
-
-  on_macos do
-    if Hardware::CPU.intel?
-      url "https://github.com/${REPO}/releases/download/${VERSION}/${DARWIN_AMD64}"
-      sha256 "${SHA_AMD64}"
-    end
-
-    if Hardware::CPU.arm?
-      url "https://github.com/${REPO}/releases/download/${VERSION}/${DARWIN_ARM64}"
-      sha256 "${SHA_ARM64}"
-    end
-  end
-
-  def install
-    if Hardware::CPU.intel?
-      bin.install "qrrun_#{version}_darwin_amd64" => "qrrun"
-    else
-      bin.install "qrrun_#{version}_darwin_arm64" => "qrrun"
-    end
-  end
-
-  test do
-    assert_match version.to_s, shell_output("#{bin}/qrrun --version")
-  end
-end
-EOF
+          bash ./scripts/release_generate_homebrew_formula.sh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
