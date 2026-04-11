@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -118,11 +117,7 @@ func Run(opts Options) error {
 
 	// Build the QR code URL: replace the local base URL with the public one,
 	// then let the runtime wrap it in the appropriate URL scheme.
-	rawScriptPublicURL := replaceBase(srv.ScriptURL(), publicURL)
-	if err := waitForPublicOriginReady(ctx, rawScriptPublicURL, bearerToken, 5*time.Second); err != nil {
-		return fmt.Errorf("tunnel not ready: %w", err)
-	}
-	scriptPublicURL := rt.QRCodeURL(rawScriptPublicURL, bearerToken)
+	scriptPublicURL := rt.QRCodeURL(replaceBase(srv.ScriptURL(), publicURL), bearerToken)
 
 	if opts.URLOnly {
 		fmt.Fprintln(opts.Output, scriptPublicURL)
@@ -219,49 +214,6 @@ func generateBearerToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(raw), nil
-}
-
-func waitForPublicOriginReady(ctx context.Context, rawScriptPublicURL, bearerToken string, timeout time.Duration) error {
-	if timeout <= 0 {
-		timeout = 5 * time.Second
-	}
-
-	deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	client := &http.Client{Timeout: 1500 * time.Millisecond}
-	ticker := time.NewTicker(150 * time.Millisecond)
-	defer ticker.Stop()
-
-	var lastErr error
-
-	for {
-		req, err := http.NewRequestWithContext(deadlineCtx, http.MethodHead, rawScriptPublicURL, nil)
-		if err != nil {
-			return err
-		}
-		req.Header.Set("Authorization", "Bearer "+bearerToken)
-
-		resp, err := client.Do(req)
-		if err == nil {
-			_ = resp.Body.Close()
-			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-				return nil
-			}
-			lastErr = fmt.Errorf("unexpected status: %d", resp.StatusCode)
-		} else {
-			lastErr = err
-		}
-
-		select {
-		case <-deadlineCtx.Done():
-			if lastErr != nil {
-				return lastErr
-			}
-			return deadlineCtx.Err()
-		case <-ticker.C:
-		}
-	}
 }
 
 func loadScriptContent(scriptPath string, input io.Reader) ([]byte, error) {
