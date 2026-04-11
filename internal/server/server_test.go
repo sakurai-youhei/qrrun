@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -66,20 +65,11 @@ func TestServer_URLFormat(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	if runtime.GOOS == "windows" {
-		if !strings.HasPrefix(srv.URL(), "http://127.0.0.1:") {
-			t.Errorf("unexpected URL: %q", srv.URL())
-		}
-		if !strings.HasPrefix(srv.OriginURL(), "http://127.0.0.1:") {
-			t.Errorf("unexpected OriginURL: %q", srv.OriginURL())
-		}
-	} else {
-		if srv.URL() != "http://localhost" {
-			t.Errorf("unexpected URL: %q", srv.URL())
-		}
-		if !strings.HasPrefix(srv.OriginURL(), "unix://") {
-			t.Errorf("unexpected OriginURL: %q", srv.OriginURL())
-		}
+	if !strings.HasPrefix(srv.URL(), "http://127.0.0.1:") {
+		t.Errorf("unexpected URL: %q", srv.URL())
+	}
+	if !strings.HasPrefix(srv.OriginURL(), "http://127.0.0.1:") {
+		t.Errorf("unexpected OriginURL: %q", srv.OriginURL())
 	}
 
 	scriptURL := srv.ScriptURL()

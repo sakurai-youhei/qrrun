@@ -36,10 +36,10 @@ func TestCloudflaredBuildArgs_WithExtraOptions(t *testing.T) {
 	}
 }
 
-func TestCloudflaredBuildArgs_UnixOrigin(t *testing.T) {
+func TestCloudflaredBuildArgs_LocalhostURL(t *testing.T) {
 	c := &Cloudflared{ExtraArgs: []string{"--loglevel", "debug"}}
-	got := c.buildArgs("unix:///tmp/qrrun.sock")
-	want := []string{"tunnel", "--loglevel", "debug", "--unix-socket", "/tmp/qrrun.sock"}
+	got := c.buildArgs("http://127.0.0.1:54321")
+	want := []string{"tunnel", "--loglevel", "debug", "--url", "http://127.0.0.1:54321"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unexpected args: got %#v, want %#v", got, want)
 	}
