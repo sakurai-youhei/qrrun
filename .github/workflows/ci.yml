@@ -10,21 +10,28 @@ permissions:
   contents: read
 
 jobs:
-  checks:
+  checks-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install gvm
-        shell: bash
-        run: |
-          bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
 
       - name: Run checks
         shell: bash
         run: |
-          make gvm-setup test lint vet
+          go test ./...
+          go vet ./...
+          go build ./...
+          if command -v golangci-lint >/dev/null 2>&1; then
+            golangci-lint run ./...
+          else
+            go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run ./...
+          fi
 
   checks-windows:
     runs-on: windows-latest
@@ -43,3 +50,8 @@ jobs:
           go test ./...
           go vet ./...
           go build ./...
+          if command -v golangci-lint >/dev/null 2>&1; then
+            golangci-lint run ./...
+          else
+            go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run ./...
+          fi
