@@ -30,9 +30,9 @@ class Qrrun < Formula
 
   def install
     if Hardware::CPU.intel?
-      bin.install "qrrun_#{version}_darwin_amd64" => "qrrun"
+      bin.install "qrrun_v#{version}_darwin_amd64" => "qrrun"
     else
-      bin.install "qrrun_#{version}_darwin_arm64" => "qrrun"
+      bin.install "qrrun_v#{version}_darwin_arm64" => "qrrun"
     end
   end
 
