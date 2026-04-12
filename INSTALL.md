@@ -14,13 +14,20 @@ curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/i
 
 ## macOS (Homebrew)
 
-Install the latest release:
+Install from tap (recommended):
+
+```bash
+brew tap sakurai-youhei/tap
+brew install sakurai-youhei/tap/qrrun
+```
+
+Install the latest release without adding tap:
 
 ```bash
 brew install --formula https://github.com/sakurai-youhei/qrrun/releases/latest/download/qrrun.rb
 ```
 
-Install a specific version:
+Install a specific version (direct formula URL):
 
 ```bash
 brew install --formula https://github.com/sakurai-youhei/qrrun/releases/download/v0.1.3/qrrun.rb
