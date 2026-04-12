@@ -4,6 +4,9 @@ set -euo pipefail
 VERSION="${VERSION:?VERSION is required}"
 LINUX_PACKAGES_PAT="${LINUX_PACKAGES_PAT:?LINUX_PACKAGES_PAT is required}"
 QRRUN_GITHUB_TOKEN="${QRRUN_GITHUB_TOKEN:?QRRUN_GITHUB_TOKEN is required}"
+LINUX_REPO_GPG_PRIVATE_KEY="${LINUX_REPO_GPG_PRIVATE_KEY:?LINUX_REPO_GPG_PRIVATE_KEY is required}"
+LINUX_REPO_GPG_PASSPHRASE="${LINUX_REPO_GPG_PASSPHRASE:?LINUX_REPO_GPG_PASSPHRASE is required}"
+LINUX_REPO_GPG_KEY_ID="${LINUX_REPO_GPG_KEY_ID:-}"
 SOURCE_REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
 SOURCE_OWNER="${SOURCE_REPO%%/*}"
@@ -16,7 +19,7 @@ if [[ "${VERSION_NO_V}" =~ -(alpha|beta|rc)(\.|$) ]]; then
   exit 0
 fi
 
-for tool in gh git curl dpkg-scanpackages apt-ftparchive createrepo_c; do
+for tool in gh git curl gpg dpkg-scanpackages apt-ftparchive createrepo_c; do
   if ! command -v "${tool}" >/dev/null 2>&1; then
     echo "Required tool is not installed: ${tool}"
     exit 1
@@ -28,6 +31,32 @@ cleanup() {
   rm -rf "${TMP_DIR}"
 }
 trap cleanup EXIT
+
+export GNUPGHOME="${TMP_DIR}/gnupg"
+mkdir -p "${GNUPGHOME}"
+chmod 700 "${GNUPGHOME}"
+
+printf '%s' "${LINUX_REPO_GPG_PRIVATE_KEY}" | gpg --batch --import
+
+SIGNING_KEY="${LINUX_REPO_GPG_KEY_ID}"
+if [[ -z "${SIGNING_KEY}" ]]; then
+  SIGNING_KEY="$(gpg --batch --list-secret-keys --with-colons | awk -F: '$1 == "sec" {print $5; exit}')"
+fi
+
+if [[ -z "${SIGNING_KEY}" ]]; then
+  echo "Failed to resolve signing key ID from imported private key."
+  exit 1
+fi
+
+gpg_sign() {
+  gpg \
+    --batch \
+    --yes \
+    --pinentry-mode loopback \
+    --passphrase "${LINUX_REPO_GPG_PASSPHRASE}" \
+    --local-user "${SIGNING_KEY}" \
+    "$@"
+}
 
 BASE_RELEASE_URL="https://github.com/${SOURCE_REPO}/releases/download/${VERSION}"
 DEB_AMD64="qrrun_${VERSION_NO_V}_amd64.deb"
@@ -72,9 +101,11 @@ APT_POOL_DIR="apt/pool/main/q/qrrun"
 APT_DIST_DIR="apt/dists/stable/main"
 RPM_X86_DIR="rpm/x86_64"
 RPM_AARCH64_DIR="rpm/aarch64"
+KEYS_DIR="keys"
 
 mkdir -p "${APT_POOL_DIR}" "${APT_DIST_DIR}/binary-amd64" "${APT_DIST_DIR}/binary-arm64"
 mkdir -p "${RPM_X86_DIR}" "${RPM_AARCH64_DIR}"
+mkdir -p "${KEYS_DIR}"
 
 cp "${TMP_DIR}/${DEB_AMD64}" "${APT_POOL_DIR}/${DEB_AMD64}"
 cp "${TMP_DIR}/${DEB_ARM64}" "${APT_POOL_DIR}/${DEB_ARM64}"
@@ -84,6 +115,7 @@ cp "${TMP_DIR}/${RPM_AARCH64}" "${RPM_AARCH64_DIR}/${RPM_AARCH64}"
 pushd apt >/dev/null
 rm -f dists/stable/main/binary-amd64/Packages dists/stable/main/binary-amd64/Packages.gz
 rm -f dists/stable/main/binary-arm64/Packages dists/stable/main/binary-arm64/Packages.gz
+rm -f dists/stable/InRelease dists/stable/Release.gpg
 
 dpkg-scanpackages --arch amd64 pool/main/q/qrrun /dev/null >dists/stable/main/binary-amd64/Packages
 gzip -9c dists/stable/main/binary-amd64/Packages >dists/stable/main/binary-amd64/Packages.gz
@@ -97,12 +129,22 @@ apt-ftparchive \
   -o APT::FTPArchive::Release::Suite="stable" \
   -o APT::FTPArchive::Release::Codename="stable" \
   release dists/stable >dists/stable/Release
+
+gpg_sign --clearsign --output dists/stable/InRelease dists/stable/Release
+gpg_sign --detach-sign --armor --output dists/stable/Release.gpg dists/stable/Release
 popd >/dev/null
 
 createrepo_c --update --simple-md-filenames "${RPM_X86_DIR}"
 createrepo_c --update --simple-md-filenames "${RPM_AARCH64_DIR}"
 
-git add -A apt rpm
+rm -f "${RPM_X86_DIR}/repodata/repomd.xml.asc" "${RPM_AARCH64_DIR}/repodata/repomd.xml.asc"
+gpg_sign --detach-sign --armor --output "${RPM_X86_DIR}/repodata/repomd.xml.asc" "${RPM_X86_DIR}/repodata/repomd.xml"
+gpg_sign --detach-sign --armor --output "${RPM_AARCH64_DIR}/repodata/repomd.xml.asc" "${RPM_AARCH64_DIR}/repodata/repomd.xml"
+
+gpg --batch --yes --armor --output "${KEYS_DIR}/qrrun-packages.asc" --export "${SIGNING_KEY}"
+gpg --batch --yes --output "${KEYS_DIR}/qrrun-packages.gpg" --export "${SIGNING_KEY}"
+
+git add -A apt rpm keys
 
 if git diff --cached --quiet; then
   echo "No repository changes detected. Skipping commit and PR creation."
@@ -156,6 +198,7 @@ cat >"${PR_BODY_FILE}" <<EOF
 ## Repositories
 - apt base: https://raw.githubusercontent.com/${LINUX_PACKAGES_REPO}/main/apt
 - rpm base: https://raw.githubusercontent.com/${LINUX_PACKAGES_REPO}/main/rpm
+- key base: https://raw.githubusercontent.com/${LINUX_PACKAGES_REPO}/main/keys
 EOF
 
 gh pr create \
