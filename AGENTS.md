@@ -85,3 +85,38 @@ gh release view <TAG>
 - Do not tag from feature branches.
 - Prefer signed tags for release traceability.
 - Keep release actions limited to requested scope (do not modify unrelated branches/tags).
+
+## Pull Request Body Editing
+
+Use these rules when creating or editing PR descriptions via `gh pr create` / `gh pr edit`.
+
+### Goal
+
+Avoid malformed Markdown caused by shell escaping or accidental blockquote prefixes.
+
+### Recommended Method
+
+Prefer a body file instead of inline multi-line strings.
+
+```bash
+cat > /tmp/pr-body.md <<'EOF'
+## Summary
+- item 1
+- item 2
+
+## Added
+- detail A
+EOF
+
+gh pr edit <PR_NUMBER> --body-file /tmp/pr-body.md
+```
+
+### Rules
+
+- Do not pass literal `\\n` sequences expecting line breaks.
+- Do not prefix body lines with `>` unless a blockquote is intended.
+- After editing, verify rendered body content:
+
+```bash
+gh pr view <PR_NUMBER> --json body
+```
