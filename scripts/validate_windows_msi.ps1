@@ -175,6 +175,22 @@ function Assert-QrrunExecutable {
   }
 }
 
+function Write-MsiLogOnFailure {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$LogPath
+  )
+
+  if (-not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
+    Write-Output "msiexec log file was not found: $LogPath"
+    return
+  }
+
+  Write-Output "----- Begin msiexec log: $LogPath -----"
+  Get-Content -LiteralPath $LogPath
+  Write-Output "----- End msiexec log: $LogPath -----"
+}
+
 function Invoke-MsiExec {
   param(
     [Parameter(Mandatory = $true)]
@@ -192,6 +208,7 @@ function Invoke-MsiExec {
   Write-Output "Running: msiexec.exe $fullArguments"
   $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList $fullArguments -NoNewWindow -Wait -PassThru
   if ($AllowedExitCodes -notcontains $process.ExitCode) {
+    Write-MsiLogOnFailure -LogPath $logPath
     throw "msiexec failed in '$OperationName' with exit code $($process.ExitCode). See $logPath"
   }
 
@@ -218,7 +235,7 @@ function Test-InstallExecutionSupported {
   )
 
   if ($TargetGoArch -ne 'amd64') {
-    Write-Output "Skipping install flow tests for $TargetGoArch MSI on this runner"
+    Write-Information "Skipping install flow tests for $TargetGoArch MSI on this runner" -InformationAction Continue
     return $false
   }
 
