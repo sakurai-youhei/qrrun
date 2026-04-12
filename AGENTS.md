@@ -86,6 +86,16 @@ gh release view <TAG>
 - Prefer signed tags for release traceability.
 - Keep release actions limited to requested scope (do not modify unrelated branches/tags).
 
+## SKILL.md Maintenance
+
+Keep `SKILL.md` aligned with real behavior and release readiness.
+
+### SKILL Rules
+
+1. When command-line options are added, removed, or changed, update `SKILL.md` in the same change set.
+2. Before any release tagging step, verify that `SKILL.md` accurately reflects current CLI behavior and supported workflows.
+3. When new operational tips are discovered (debugging, CI, runtime quirks, troubleshooting), proactively consider adding them to `SKILL.md` and recommend the update in reviews.
+
 ## Pull Request Body Editing
 
 Use these rules when creating or editing PR descriptions via `gh pr create` / `gh pr edit`.
