@@ -30,7 +30,7 @@ Run from stdin (`-`):
 echo "print('Hello, QRrun!')" | qrrun - arg1 arg2
 ```
 
-By default, QRrun generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
+By default, QRrun generates a QR code for opening and running your script in [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097) via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
 For more options and behavior details, run `qrrun --help`.
 
 ## Installation
