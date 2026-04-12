@@ -127,7 +127,7 @@ jobs:
           fi
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*.tar.gz
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload packaged artifact (deb)
         if: matrix.goos == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}-deb
           path: dist/*.deb
@@ -143,7 +143,7 @@ jobs:
 
       - name: Upload packaged artifact (rpm)
         if: matrix.goos == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}-rpm
           path: dist/*.rpm
@@ -151,7 +151,7 @@ jobs:
 
       - name: Upload packaged artifact (zip)
         if: matrix.archive == 'zip'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.goos }}-${{ matrix.goarch }}-zip
           path: dist/*.zip
@@ -203,14 +203,14 @@ jobs:
 
       - name: Upload MSI validation logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-windows-${{ matrix.goarch }}-msi-validation-logs
           path: dist/msi-validation-logs/*.log
           if-no-files-found: warn
 
       - name: Upload MSI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-windows-${{ matrix.goarch }}-msi
           path: dist/*.msi
