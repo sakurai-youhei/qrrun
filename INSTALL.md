@@ -7,7 +7,13 @@ Install from package repositories (recommended).
 Debian / Ubuntu (APT):
 
 ```bash
-echo "deb [trusted=yes] https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/apt stable main" | sudo tee /etc/apt/sources.list.d/qrrun.list >/dev/null
+curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/keys/qrrun-packages.asc \
+	| gpg --dearmor \
+	| sudo tee /usr/share/keyrings/qrrun-archive-keyring.gpg >/dev/null
+
+echo "deb [signed-by=/usr/share/keyrings/qrrun-archive-keyring.gpg] https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/apt stable main" \
+	| sudo tee /etc/apt/sources.list.d/qrrun.list >/dev/null
+
 sudo apt-get update
 sudo apt-get install -y qrrun
 ```
@@ -20,8 +26,9 @@ sudo tee /etc/yum.repos.d/qrrun.repo >/dev/null <<'EOF'
 name=qrrun
 baseurl=https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/rpm/$basearch
 enabled=1
-gpgcheck=0
-repo_gpgcheck=0
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/keys/qrrun-packages.asc
 EOF
 
 sudo dnf install -y qrrun || sudo yum install -y qrrun

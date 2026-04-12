@@ -341,9 +341,17 @@ jobs:
         shell: bash
         env:
           LINUX_PACKAGES_PAT: ${{ secrets.LINUX_PACKAGES_PAT }}
+          LINUX_REPO_GPG_PRIVATE_KEY: ${{ secrets.LINUX_REPO_GPG_PRIVATE_KEY }}
+          LINUX_REPO_GPG_PASSPHRASE: ${{ secrets.LINUX_REPO_GPG_PASSPHRASE }}
         run: |
           if [ -z "${LINUX_PACKAGES_PAT}" ]; then
             echo "::warning::LINUX_PACKAGES_PAT is not set. Skipping linux-packages PR automation."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "${LINUX_REPO_GPG_PRIVATE_KEY}" ] || [ -z "${LINUX_REPO_GPG_PASSPHRASE}" ]; then
+            echo "::warning::LINUX_REPO_GPG_PRIVATE_KEY or LINUX_REPO_GPG_PASSPHRASE is not set. Skipping linux-packages PR automation."
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -355,7 +363,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev apt-utils createrepo-c
+          sudo apt-get install -y dpkg-dev apt-utils createrepo-c gnupg
 
       - name: Open linux-packages PR
         if: steps.token.outputs.enabled == 'true'
@@ -365,5 +373,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           LINUX_PACKAGES_PAT: ${{ secrets.LINUX_PACKAGES_PAT }}
           QRRUN_GITHUB_TOKEN: ${{ github.token }}
+          LINUX_REPO_GPG_PRIVATE_KEY: ${{ secrets.LINUX_REPO_GPG_PRIVATE_KEY }}
+          LINUX_REPO_GPG_PASSPHRASE: ${{ secrets.LINUX_REPO_GPG_PASSPHRASE }}
         run: |
           bash ./scripts/release_open_linux_packages_pr.sh
