@@ -21,11 +21,11 @@ type Runtime interface {
 func New(name string) (Runtime, error) {
 	switch name {
 	case "pythonista":
-		return &Pythonista{Scheme: "pythonista"}, nil
+		return &Pythonista{Scheme: "pythonista", Python2: false}, nil
 	case "pythonista2":
-		return &Pythonista{Scheme: "pythonista2"}, nil
+		return &Pythonista{Scheme: "pythonista2", Python2: true}, nil
 	case "pythonista3":
-		return &Pythonista{Scheme: "pythonista3"}, nil
+		return &Pythonista{Scheme: "pythonista3", Python2: false}, nil
 	default:
 		return nil, fmt.Errorf("unknown runtime %q (available: pythonista, pythonista2, pythonista3)", name)
 	}

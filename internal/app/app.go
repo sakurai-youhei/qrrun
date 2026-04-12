@@ -43,6 +43,21 @@ const DefaultExitQuietPeriod = 500 * time.Millisecond
 
 const alphaNumChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
+const DefaultQRErrorLevel = "M"
+
+var SupportedQRErrorLevels = []string{"L", "M", "Q", "H"}
+
+var qrLevelByName = map[string]qr.Level{
+	"L": qr.L,
+	"M": qr.M,
+	"Q": qr.Q,
+	"H": qr.H,
+}
+
+func SupportedQRErrorLevelsText() string {
+	return strings.Join(SupportedQRErrorLevels, ", ")
+}
+
 // Run performs the full QRrun workflow:
 //  1. Validates options and resolves the transport / runtime.
 //  2. Starts a local HTTP server to serve the script.
@@ -326,18 +341,14 @@ func replaceBase(rawURL, publicBase string) string {
 }
 
 func parseQRErrorLevel(level string) (qr.Level, error) {
-	switch strings.ToUpper(strings.TrimSpace(level)) {
-	case "", "M":
-		return qr.M, nil
-	case "L":
-		return qr.L, nil
-	case "Q":
-		return qr.Q, nil
-	case "H":
-		return qr.H, nil
-	default:
-		return 0, fmt.Errorf("invalid qr level %q: must be one of L, M, Q, H", level)
+	normalized := strings.ToUpper(strings.TrimSpace(level))
+	if normalized == "" {
+		normalized = DefaultQRErrorLevel
 	}
+	if mapped, ok := qrLevelByName[normalized]; ok {
+		return mapped, nil
+	}
+	return 0, fmt.Errorf("invalid qr level %q: must be one of %s", level, SupportedQRErrorLevelsText())
 }
 
 func renderCompactQRCode(w io.Writer, content string, level qr.Level) error {
