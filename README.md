@@ -20,7 +20,7 @@ sequenceDiagram
 
 	User->>QRrun: Run qrrun <script|-> [args...]
 	QRrun->>QRrun: Start localhost server and register script endpoint
-	QRrun->>Cloudflare: Start cloudflared for quick tunnel to local server
+	QRrun->>Cloudflare: Start cloudflared for quick tunnel to localhost server
 	Cloudflare-->>QRrun: Return public trycloudflare URL
 	QRrun-->>User: Render QR code (runtime URL)
 	User->>Camera: Open camera and scan QR code
