@@ -6,6 +6,31 @@ WINGET_PKGS_PAT="${WINGET_PKGS_PAT:?WINGET_PKGS_PAT is required}"
 QRRUN_GITHUB_TOKEN="${QRRUN_GITHUB_TOKEN:?QRRUN_GITHUB_TOKEN is required}"
 SOURCE_REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
+SCRIPT_NAME="$(basename "$0")"
+log() {
+  echo "[${SCRIPT_NAME}] $*"
+}
+
+require_tool() {
+  local tool="$1"
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    log "Required tool is not installed: ${tool}"
+    exit 1
+  fi
+}
+
+gh_winget() {
+  GH_TOKEN="${WINGET_PKGS_PAT}" gh "$@"
+}
+
+gh_source() {
+  GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh "$@"
+}
+
+for tool in gh git curl sha256sum awk date tr sed; do
+  require_tool "${tool}"
+done
+
 WINGET_FORK_REPO="${WINGET_FORK_REPO:-sakurai-youhei/winget-pkgs}"
 WINGET_UPSTREAM_REPO="${WINGET_UPSTREAM_REPO:-microsoft/winget-pkgs}"
 PACKAGE_IDENTIFIER="sakurai-youhei.qrrun"
@@ -14,9 +39,32 @@ PACKAGE_NAME_DIR="qrrun"
 
 VERSION_NO_V="${VERSION#v}"
 if [[ "${VERSION_NO_V}" =~ -(alpha|beta|rc)(\.|$) ]]; then
-  echo "Skipping winget-pkgs PR for pre-release tag: ${VERSION}"
+  log "Skipping winget-pkgs PR for pre-release tag: ${VERSION}"
   exit 0
 fi
+
+if ! gh_winget repo view "${WINGET_FORK_REPO}" >/dev/null 2>&1; then
+  echo "::warning::winget fork repository is not accessible: ${WINGET_FORK_REPO}. Skipping automation."
+  exit 0
+fi
+
+if ! gh_winget repo view "${WINGET_UPSTREAM_REPO}" >/dev/null 2>&1; then
+  echo "::warning::winget upstream repository is not accessible: ${WINGET_UPSTREAM_REPO}. Skipping automation."
+  exit 0
+fi
+
+FORK_DEFAULT_BRANCH="$(gh_winget repo view "${WINGET_FORK_REPO}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+if [[ -z "${FORK_DEFAULT_BRANCH}" || "${FORK_DEFAULT_BRANCH}" == "null" ]]; then
+  FORK_DEFAULT_BRANCH="master"
+fi
+
+UPSTREAM_DEFAULT_BRANCH="$(gh_winget repo view "${WINGET_UPSTREAM_REPO}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+if [[ -z "${UPSTREAM_DEFAULT_BRANCH}" || "${UPSTREAM_DEFAULT_BRANCH}" == "null" ]]; then
+  UPSTREAM_DEFAULT_BRANCH="master"
+fi
+
+log "Using fork default branch: ${FORK_DEFAULT_BRANCH}"
+log "Using upstream base branch: ${UPSTREAM_DEFAULT_BRANCH}"
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -28,7 +76,7 @@ BASE_RELEASE_URL="https://github.com/${SOURCE_REPO}/releases/download/${VERSION}
 X64_URL="${BASE_RELEASE_URL}/qrrun_${VERSION}_windows_amd64.msi"
 ARM64_URL="${BASE_RELEASE_URL}/qrrun_${VERSION}_windows_arm64.msi"
 
-echo "Downloading MSI assets for ${VERSION}"
+log "Downloading MSI assets for ${VERSION}"
 curl -fsSL -o "${TMP_DIR}/qrrun_x64.msi" "${X64_URL}"
 curl -fsSL -o "${TMP_DIR}/qrrun_arm64.msi" "${ARM64_URL}"
 
@@ -36,12 +84,14 @@ X64_SHA256="$(sha256sum "${TMP_DIR}/qrrun_x64.msi" | awk '{print toupper($1)}')"
 ARM64_SHA256="$(sha256sum "${TMP_DIR}/qrrun_arm64.msi" | awk '{print toupper($1)}')"
 RELEASE_DATE="$(date -u +%F)"
 
-echo "Cloning ${WINGET_FORK_REPO}"
+log "Cloning ${WINGET_FORK_REPO}"
 git clone "https://x-access-token:${WINGET_PKGS_PAT}@github.com/${WINGET_FORK_REPO}.git" "${TMP_DIR}/winget-pkgs"
 
 cd "${TMP_DIR}/winget-pkgs"
 git config user.name "github-actions[bot]"
 git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+git switch "${FORK_DEFAULT_BRANCH}"
 
 BRANCH_NAME="sakurai-youhei-qrrun-${VERSION_NO_V}"
 if git ls-remote --exit-code --heads origin "${BRANCH_NAME}" >/dev/null 2>&1; then
@@ -115,7 +165,7 @@ ManifestVersion: 1.12.0
 EOF
 
 if git diff --quiet -- "${MANIFEST_DIR}"; then
-  echo "No manifest changes detected. Skipping commit and PR creation."
+  log "No manifest changes detected. Skipping commit and PR creation."
   exit 0
 fi
 
@@ -124,10 +174,10 @@ git commit -m "Add ${PACKAGE_IDENTIFIER} version ${VERSION_NO_V}"
 git push --set-upstream origin "${BRANCH_NAME}"
 
 ISSUE_TITLE="Release: submit ${PACKAGE_IDENTIFIER} ${VERSION_NO_V} to winget-pkgs"
-EXISTING_ISSUE_NUMBER="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
+EXISTING_ISSUE_NUMBER="$(gh_source issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
 
 if [[ -n "${EXISTING_ISSUE_NUMBER}" && "${EXISTING_ISSUE_NUMBER}" != "null" ]]; then
-  ISSUE_URL="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
+  ISSUE_URL="$(gh_source issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
 else
   ISSUE_BODY_FILE="${TMP_DIR}/qrrun-winget-release-issue.md"
   cat >"${ISSUE_BODY_FILE}" <<EOF
@@ -143,36 +193,37 @@ else
 - target branch: ${BRANCH_NAME}
 EOF
 
-  ISSUE_URL="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
+  ISSUE_URL="$(gh_source issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
 fi
 
-export GH_TOKEN="${WINGET_PKGS_PAT}"
-EXISTING_PR_NUMBER="$(gh pr list --repo "${WINGET_UPSTREAM_REPO}" --head "sakurai-youhei:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
+EXISTING_PR_NUMBER="$(gh_winget pr list --repo "${WINGET_UPSTREAM_REPO}" --head "sakurai-youhei:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
 if [[ -n "${EXISTING_PR_NUMBER}" && "${EXISTING_PR_NUMBER}" != "null" ]]; then
-  echo "winget-pkgs PR already exists: #${EXISTING_PR_NUMBER}"
+  log "winget-pkgs PR already exists: #${EXISTING_PR_NUMBER}"
   exit 0
 fi
 
 PR_TEMPLATE_FILE=".github/PULL_REQUEST_TEMPLATE.md"
 if [[ ! -f "${PR_TEMPLATE_FILE}" ]]; then
-  echo "PR template file not found: ${PR_TEMPLATE_FILE}"
+  log "PR template file not found: ${PR_TEMPLATE_FILE}"
   exit 1
 fi
 
-NEW_PR_URL="$(gh pr create \
+NEW_PR_URL="$(gh_winget pr create \
   --repo "${WINGET_UPSTREAM_REPO}" \
-  --base master \
+  --base "${UPSTREAM_DEFAULT_BRANCH}" \
   --head "sakurai-youhei:${BRANCH_NAME}" \
   --title "Add ${PACKAGE_IDENTIFIER} version ${VERSION_NO_V}" \
   --body-file "${PR_TEMPLATE_FILE}")"
 
 NEW_PR_NUMBER="${NEW_PR_URL##*/}"
 if [[ ! "${NEW_PR_NUMBER}" =~ ^[0-9]+$ ]]; then
-  echo "Failed to parse PR number from URL: ${NEW_PR_URL}"
+  log "Failed to parse PR number from URL: ${NEW_PR_URL}"
   exit 1
 fi
 
-gh pr comment \
+gh_winget pr comment \
   --repo "${WINGET_UPSTREAM_REPO}" \
   "${NEW_PR_NUMBER}" \
   --body "@sakurai-youhei winget-pkgs PR is open. Please review and complete the checklist manually. qrrun tracking issue: ${ISSUE_URL}"
+
+log "winget-pkgs PR created successfully: ${NEW_PR_URL}"

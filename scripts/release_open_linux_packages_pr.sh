@@ -9,21 +9,39 @@ LINUX_REPO_GPG_PASSPHRASE="${LINUX_REPO_GPG_PASSPHRASE:?LINUX_REPO_GPG_PASSPHRAS
 LINUX_REPO_GPG_KEY_ID="${LINUX_REPO_GPG_KEY_ID:-}"
 SOURCE_REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
+SCRIPT_NAME="$(basename "$0")"
+log() {
+  echo "[${SCRIPT_NAME}] $*"
+}
+
+require_tool() {
+  local tool="$1"
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    log "Required tool is not installed: ${tool}"
+    exit 1
+  fi
+}
+
+gh_packages() {
+  GH_TOKEN="${LINUX_PACKAGES_PAT}" gh "$@"
+}
+
+gh_source() {
+  GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh "$@"
+}
+
 SOURCE_OWNER="${SOURCE_REPO%%/*}"
 LINUX_PACKAGES_REPO="${LINUX_PACKAGES_REPO:-${SOURCE_OWNER}/linux-packages}"
 PACKAGES_OWNER="${LINUX_PACKAGES_REPO%%/*}"
 
 VERSION_NO_V="${VERSION#v}"
 if [[ "${VERSION_NO_V}" =~ -(alpha|beta|rc)(\.|$) ]]; then
-  echo "Skipping linux-packages PR for pre-release tag: ${VERSION}"
+  log "Skipping linux-packages PR for pre-release tag: ${VERSION}"
   exit 0
 fi
 
 for tool in gh git curl gpg dpkg-scanpackages apt-ftparchive createrepo_c; do
-  if ! command -v "${tool}" >/dev/null 2>&1; then
-    echo "Required tool is not installed: ${tool}"
-    exit 1
-  fi
+  require_tool "${tool}"
 done
 
 TMP_DIR="$(mktemp -d)"
@@ -44,7 +62,7 @@ if [[ -z "${SIGNING_KEY}" ]]; then
 fi
 
 if [[ -z "${SIGNING_KEY}" ]]; then
-  echo "Failed to resolve signing key ID from imported private key."
+  log "Failed to resolve signing key ID from imported private key."
   exit 1
 fi
 
@@ -64,24 +82,24 @@ DEB_ARM64="qrrun_${VERSION_NO_V}_arm64.deb"
 RPM_X86_64="qrrun_${VERSION_NO_V}_x86_64.rpm"
 RPM_AARCH64="qrrun_${VERSION_NO_V}_aarch64.rpm"
 
-echo "Downloading Linux package assets for ${VERSION}"
+log "Downloading Linux package assets for ${VERSION}"
 curl -fsSL -o "${TMP_DIR}/${DEB_AMD64}" "${BASE_RELEASE_URL}/${DEB_AMD64}"
 curl -fsSL -o "${TMP_DIR}/${DEB_ARM64}" "${BASE_RELEASE_URL}/${DEB_ARM64}"
 curl -fsSL -o "${TMP_DIR}/${RPM_X86_64}" "${BASE_RELEASE_URL}/${RPM_X86_64}"
 curl -fsSL -o "${TMP_DIR}/${RPM_AARCH64}" "${BASE_RELEASE_URL}/${RPM_AARCH64}"
 
-export GH_TOKEN="${LINUX_PACKAGES_PAT}"
-if ! gh repo view "${LINUX_PACKAGES_REPO}" >/dev/null 2>&1; then
+if ! gh_packages repo view "${LINUX_PACKAGES_REPO}" >/dev/null 2>&1; then
   echo "::warning::Linux package repository is not accessible: ${LINUX_PACKAGES_REPO}. Skipping automation."
   exit 0
 fi
 
-DEFAULT_BRANCH="$(gh repo view "${LINUX_PACKAGES_REPO}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
+DEFAULT_BRANCH="$(gh_packages repo view "${LINUX_PACKAGES_REPO}" --json defaultBranchRef --jq '.defaultBranchRef.name')"
 if [[ -z "${DEFAULT_BRANCH}" || "${DEFAULT_BRANCH}" == "null" ]]; then
   DEFAULT_BRANCH="main"
 fi
+log "Using linux-packages default branch: ${DEFAULT_BRANCH}"
 
-echo "Cloning ${LINUX_PACKAGES_REPO}"
+log "Cloning ${LINUX_PACKAGES_REPO}"
 git clone "https://x-access-token:${LINUX_PACKAGES_PAT}@github.com/${LINUX_PACKAGES_REPO}.git" "${TMP_DIR}/linux-packages"
 
 cd "${TMP_DIR}/linux-packages"
@@ -147,7 +165,7 @@ gpg --batch --yes --output "${KEYS_DIR}/qrrun-packages.gpg" --export "${SIGNING_
 git add -A apt rpm keys
 
 if git diff --cached --quiet; then
-  echo "No repository changes detected. Skipping commit and PR creation."
+  log "No repository changes detected. Skipping commit and PR creation."
   exit 0
 fi
 
@@ -155,10 +173,10 @@ git commit -m "Update qrrun Linux packages to ${VERSION}"
 git push --set-upstream origin "${BRANCH_NAME}"
 
 ISSUE_TITLE="Release: update Linux package repositories for qrrun ${VERSION_NO_V}"
-EXISTING_ISSUE_NUMBER="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
+EXISTING_ISSUE_NUMBER="$(gh_source issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
 
 if [[ -n "${EXISTING_ISSUE_NUMBER}" && "${EXISTING_ISSUE_NUMBER}" != "null" ]]; then
-  ISSUE_URL="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
+  ISSUE_URL="$(gh_source issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
 else
   ISSUE_BODY_FILE="${TMP_DIR}/qrrun-linux-release-issue.md"
   cat >"${ISSUE_BODY_FILE}" <<EOF
@@ -174,13 +192,13 @@ else
 - target branch: ${BRANCH_NAME}
 EOF
 
-  ISSUE_URL="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
+  ISSUE_URL="$(gh_source issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
 fi
 
-EXISTING_PR_NUMBER="$(gh pr list --repo "${LINUX_PACKAGES_REPO}" --head "${PACKAGES_OWNER}:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
+EXISTING_PR_NUMBER="$(gh_packages pr list --repo "${LINUX_PACKAGES_REPO}" --head "${PACKAGES_OWNER}:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
 if [[ -n "${EXISTING_PR_NUMBER}" && "${EXISTING_PR_NUMBER}" != "null" ]]; then
-  gh pr comment --repo "${LINUX_PACKAGES_REPO}" "${EXISTING_PR_NUMBER}" --body "qrrun tracking issue: ${ISSUE_URL}"
-  echo "Linux packages PR already exists: #${EXISTING_PR_NUMBER}"
+  gh_packages pr comment --repo "${LINUX_PACKAGES_REPO}" "${EXISTING_PR_NUMBER}" --body "qrrun tracking issue: ${ISSUE_URL}"
+  log "Linux packages PR already exists: #${EXISTING_PR_NUMBER}"
   exit 0
 fi
 
@@ -201,9 +219,11 @@ cat >"${PR_BODY_FILE}" <<EOF
 - key base: https://raw.githubusercontent.com/${LINUX_PACKAGES_REPO}/main/keys
 EOF
 
-gh pr create \
+gh_packages pr create \
   --repo "${LINUX_PACKAGES_REPO}" \
   --base "${DEFAULT_BRANCH}" \
   --head "${PACKAGES_OWNER}:${BRANCH_NAME}" \
   --title "Update qrrun Linux packages to ${VERSION}" \
   --body-file "${PR_BODY_FILE}"
+
+log "Linux packages PR created successfully"
