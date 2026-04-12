@@ -75,8 +75,8 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if !strings.Contains(execCode, "sys.argv=[\"hello.py\",\"arg1\",\"arg2\"]") {
 			t.Errorf("expected script argv overwrite in exec code for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, "eval(") || !strings.Contains(execCode, "compile(") || !strings.Contains(execCode, "u.urlopen(u.Request(") {
-			t.Errorf("expected eval(compile(u.urlopen(u.Request(...)))) in exec code for %q, got %q", tc.name, execCode)
+		if !strings.Contains(execCode, "exec(u.urlopen(") {
+			t.Errorf("expected exec(u.urlopen(...)) in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, "finally:") || !strings.Contains(execCode, "sys.argv=a") {
 			t.Errorf("expected sys.argv restore in finally for %q, got %q", tc.name, execCode)
@@ -84,14 +84,8 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if !strings.Contains(execCode, "import sys,urllib.request as u") {
 			t.Errorf("expected urllib import in exec code for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, "Authorization") {
-			t.Errorf("expected Authorization header in exec code for %q, got %q", tc.name, execCode)
-		}
 		if strings.Contains(execCode, "requests") {
 			t.Errorf("did not expect requests dependency in exec code for %q, got %q", tc.name, execCode)
-		}
-		if !strings.Contains(execCode, "Bearer "+bearerToken) {
-			t.Errorf("expected Bearer token in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, rawURL) {
 			t.Errorf("expected raw URL in exec code for %q, got %q", tc.name, execCode)

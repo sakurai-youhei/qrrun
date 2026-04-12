@@ -5,7 +5,6 @@ package app
 import (
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net/url"
@@ -40,6 +39,8 @@ type Options struct {
 }
 
 const DefaultExitQuietPeriod = 500 * time.Millisecond
+
+const alphaNumChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // Run performs the full QRrun workflow:
 //  1. Validates options and resolves the transport / runtime.
@@ -158,8 +159,9 @@ func Run(opts Options) error {
 	scriptArgv := make([]string, 0, 1+len(opts.ScriptArgs))
 	scriptArgv = append(scriptArgv, opts.ScriptPath)
 	scriptArgv = append(scriptArgv, opts.ScriptArgs...)
+	scriptURLWithToken := withQueryToken(replaceBase(srv.ScriptURL(), publicURL), bearerToken)
 	scriptPublicURL := rt.QRCodeURL(
-		replaceBase(srv.ScriptURL(), publicURL),
+		scriptURLWithToken,
 		bearerToken,
 		scriptArgv,
 	)
@@ -249,11 +251,42 @@ func Run(opts Options) error {
 }
 
 func generateBearerToken() (string, error) {
-	raw := make([]byte, 24)
-	if _, err := rand.Read(raw); err != nil {
-		return "", err
+	b := make([]byte, 8)
+	for i := range b {
+		idx, err := randomAlphaNumIndex(len(alphaNumChars))
+		if err != nil {
+			return "", err
+		}
+		b[i] = alphaNumChars[idx]
 	}
-	return hex.EncodeToString(raw), nil
+	return string(b), nil
+}
+
+func randomAlphaNumIndex(max int) (int, error) {
+	if max <= 0 || max > 256 {
+		return 0, fmt.Errorf("invalid max: %d", max)
+	}
+	limit := byte(256 - (256 % max))
+	for {
+		var one [1]byte
+		if _, err := rand.Read(one[:]); err != nil {
+			return 0, err
+		}
+		if one[0] < limit {
+			return int(one[0]) % max, nil
+		}
+	}
+}
+
+func withQueryToken(rawURL, token string) string {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	q := parsed.Query()
+	q.Set("t", token)
+	parsed.RawQuery = q.Encode()
+	return parsed.String()
 }
 
 func loadScriptContent(scriptPath string, input io.Reader) ([]byte, error) {

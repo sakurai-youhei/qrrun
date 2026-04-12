@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -82,8 +83,8 @@ func TestServer_URLFormat(t *testing.T) {
 	if strings.Contains(id, ".") {
 		t.Errorf("expected extensionless script id, got %q", id)
 	}
-	if ok, _ := regexp.MatchString("^[a-f0-9]{32}$", id); !ok {
-		t.Errorf("expected 32-char lowercase hex script id, got %q", id)
+	if ok, _ := regexp.MatchString("^[a-zA-Z0-9]{8}$", id); !ok {
+		t.Errorf("expected 8-char alnum script id, got %q", id)
 	}
 }
 
@@ -223,11 +224,15 @@ func TestServer_RejectsUnauthorizedRequest(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
+	start := time.Now()
 	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), "wrong-token", nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
 	defer resp.Body.Close()
+	if elapsed := time.Since(start); elapsed < 950*time.Millisecond {
+		t.Fatalf("expected unauthorized response delay around 1s, got %s", elapsed)
+	}
 
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401 Unauthorized, got %d", resp.StatusCode)
@@ -240,12 +245,45 @@ func TestServer_RejectsUnauthorizedRequest(t *testing.T) {
 	}
 }
 
+func TestServer_AcceptsQueryToken(t *testing.T) {
+	srv, err := server.New([]byte("print('ok')\n"), "text/x-python; charset=utf-8", testBearerToken, io.Discard)
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = srv.Serve(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	queryURL := srv.ScriptURL() + "?t=" + url.QueryEscape(testBearerToken)
+	resp, err := doRequestRawURL(serverHTTPClient(srv), http.MethodGet, queryURL, "", nil)
+	if err != nil {
+		t.Fatalf("GET %s: %v", queryURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", resp.StatusCode)
+	}
+}
+
 func doRequest(client *http.Client, method, url, bearerToken string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, url, body)
+	return doRequestRawURL(client, method, url, bearerToken, body)
+}
+
+func doRequestRawURL(client *http.Client, method, rawURL, bearerToken string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, rawURL, body)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	if bearerToken != "" {
+		req.Header.Set("Authorization", "Bearer "+bearerToken)
+	}
 	return client.Do(req)
 }
 
