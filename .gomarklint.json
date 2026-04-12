@@ -1,0 +1,16 @@
+{
+  "enableDuplicateHeadingCheck": true,
+  "enableFinalBlankLineCheck": true,
+  "enableHeadingLevelCheck": true,
+  "enableLinkCheck": false,
+  "enableNoMultipleBlankLinesCheck": true,
+  "enableNoSetextHeadingsCheck": true,
+  "ignore": [],
+  "include": [
+    "**/*.md"
+  ],
+  "linkCheckTimeoutSeconds": 5,
+  "minHeadingLevel": 1,
+  "output": "text",
+  "skipLinkPatterns": []
+}

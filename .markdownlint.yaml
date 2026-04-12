@@ -1,8 +1,0 @@
-default: true
-
-# Keep line length practical for README code blocks/links.
-MD013:
-  line_length: 140
-
-# Allow duplicate heading text in separate sections when needed.
-MD024: false
