@@ -114,20 +114,15 @@ jobs:
           winget install --id Cloudflare.cloudflared --exact --silent --accept-package-agreements --accept-source-agreements
 
           $candidates = @(
-            "$env:ProgramFiles\\cloudflared\\cloudflared.exe",
-            "$env:ProgramFiles\\Cloudflared\\cloudflared.exe",
-            "$env:ProgramFiles\\Cloudflare\\Cloudflared\\cloudflared.exe",
-            "$env:ProgramFiles(x86)\\cloudflared\\cloudflared.exe",
-            "$env:ProgramFiles(x86)\\Cloudflared\\cloudflared.exe",
-            "$env:ProgramFiles(x86)\\Cloudflare\\Cloudflared\\cloudflared.exe"
+            "${env:ProgramFiles}\\cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles}\\Cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles}\\Cloudflare\\Cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles(x86)}\\cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles(x86)}\\Cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles(x86)}\\Cloudflare\\Cloudflared\\cloudflared.exe"
           )
 
           $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $exe) {
-            $exe = Get-ChildItem "$env:ProgramFiles", "$env:ProgramFiles(x86)" -Filter cloudflared.exe -Recurse -ErrorAction SilentlyContinue |
-              Select-Object -ExpandProperty FullName -First 1
-          }
-
           if (-not $exe) {
             throw "cloudflared.exe was installed but could not be located"
           }
