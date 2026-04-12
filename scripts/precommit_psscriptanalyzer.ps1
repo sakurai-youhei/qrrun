@@ -18,7 +18,7 @@ Import-Module PSScriptAnalyzer
 $issues = @()
 foreach ($path in $Paths) {
   if (-not [string]::IsNullOrWhiteSpace($path)) {
-    $issues += Invoke-ScriptAnalyzer -Path $path -Severity Error,Warning
+    $issues += Invoke-ScriptAnalyzer -Path $path -Severity Error,Warning,Information
   }
 }
 
