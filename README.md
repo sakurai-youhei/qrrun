@@ -78,16 +78,16 @@ gvm install go1.24.13
 gvm use go1.24.13 --default
 ```
 
-3. Run CI-like checks:
-
-```bash
-make checks
-```
-
-4. Install pre-commit hooks (highly recommended):
+3. Install pre-commit hooks (highly recommended):
 
 ```bash
 pre-commit install
+```
+
+4. Run the end-to-end test:
+
+```bash
+make test-e2e
 ```
 
 ## Release

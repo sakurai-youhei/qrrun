@@ -51,6 +51,9 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if !strings.HasPrefix(got, tc.scheme+"://") {
 			t.Errorf("expected %s:// scheme, got %q", tc.scheme, got)
 		}
+		if strings.Contains(got, "\n") || strings.Contains(got, "\r") {
+			t.Errorf("expected single-line URL for %q, got %q", tc.name, got)
+		}
 
 		prefix := tc.scheme + "://?exec="
 		if !strings.HasPrefix(got, prefix) {
@@ -65,14 +68,20 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to decode exec code for %q: %v (raw: %q)", tc.name, err, rawExec)
 		}
-		if !strings.HasPrefix(execCode, "exec(__import__(\"requests\").get(") {
-			t.Errorf("expected single-expression __import__ prefix in exec code for %q, got %q", tc.name, execCode)
+		if !strings.HasPrefix(execCode, "import urllib.request as u;exec(") {
+			t.Errorf("expected urllib.request-based exec code prefix for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, ").text)") {
-			t.Errorf("expected .text execution suffix in exec code for %q, got %q", tc.name, execCode)
+		if !strings.Contains(execCode, "u.urlopen(u.Request(") {
+			t.Errorf("expected urllib.request urlopen/request usage in exec code for %q, got %q", tc.name, execCode)
+		}
+		if !strings.Contains(execCode, ".read().decode())") {
+			t.Errorf("expected decoded response execution suffix in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, "Authorization") {
 			t.Errorf("expected Authorization header in exec code for %q, got %q", tc.name, execCode)
+		}
+		if strings.Contains(execCode, "requests") {
+			t.Errorf("did not expect requests dependency in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, "Bearer "+bearerToken) {
 			t.Errorf("expected Bearer token in exec code for %q, got %q", tc.name, execCode)
