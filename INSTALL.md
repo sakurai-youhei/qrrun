@@ -2,14 +2,29 @@
 
 ## Linux
 
+Install from package repositories (recommended).
+
+Debian / Ubuntu (APT):
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash
+echo "deb [trusted=yes] https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/apt stable main" | sudo tee /etc/apt/sources.list.d/qrrun.list >/dev/null
+sudo apt-get update
+sudo apt-get install -y qrrun
 ```
 
-Install a specific version:
+RHEL / Fedora / Amazon Linux (YUM/DNF):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash -s -- v0.1.0
+sudo tee /etc/yum.repos.d/qrrun.repo >/dev/null <<'EOF'
+[qrrun]
+name=qrrun
+baseurl=https://raw.githubusercontent.com/sakurai-youhei/linux-packages/main/rpm/$basearch
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+EOF
+
+sudo dnf install -y qrrun || sudo yum install -y qrrun
 ```
 
 ## macOS (Homebrew)
