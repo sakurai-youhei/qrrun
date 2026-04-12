@@ -12,9 +12,7 @@ Tunnel local code. Run via QR.
 ## Prerequisites
 
 - `cloudflared` must be installed and available in your PATH.
-- QRrun uses Cloudflare Quick Tunnels (`trycloudflare.com`).
-
-See [Cloudflare Quick Tunnel documentation](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/) for details.
+- QRrun uses Cloudflare Quick Tunnels (`trycloudflare.com`). See [Cloudflare Quick Tunnel documentation](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/) for details.
 
 ## Usage
 
@@ -30,7 +28,7 @@ Run from stdin (`-`):
 echo "print('Hello, QRrun!')" | qrrun - arg1 arg2
 ```
 
-By default, QRrun generates a QR code for opening and running your script in [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097) via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.
+By default, QRrun generates a QR code for opening and running your script in [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097); use `--runtime` to override this behavior.
 For more options and behavior details, run `qrrun --help`.
 
 ## Installation
