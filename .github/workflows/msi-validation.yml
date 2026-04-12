@@ -1,0 +1,68 @@
+name: msi-validation
+
+'on':
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - .github/workflows/msi-validation.yml
+      - packaging/windows/**
+      - scripts/release_build_windows_msi.ps1
+      - scripts/validate_windows_msi.ps1
+      - cmd/qrrun/main.go
+      - go.mod
+      - go.sum
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-msi:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goarch: amd64
+            wix_arch: x64
+          - goarch: arm64
+            wix_arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install WiX Toolset
+        shell: powershell
+        run: |
+          choco install wixtoolset -y
+          echo "C:\Program Files (x86)\WiX Toolset v3.14\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Build MSI
+        shell: powershell
+        env:
+          VERSION: v0.0.0-beta.1
+          GOARCH: ${{ matrix.goarch }}
+          WIX_ARCH: ${{ matrix.wix_arch }}
+        run: |
+          ./scripts/release_build_windows_msi.ps1
+
+      - name: Validate MSI installer behavior
+        shell: powershell
+        env:
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          ./scripts/validate_windows_msi.ps1 -MsiPath "dist/qrrun_v0.0.0-beta.1_windows_${env:GOARCH}.msi" -GoArch $env:GOARCH
+
+      - name: Upload MSI validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msi-validation-${{ matrix.goarch }}-logs
+          path: dist/msi-validation-logs/*.log
+          if-no-files-found: warn

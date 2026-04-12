@@ -193,6 +193,22 @@ jobs:
         run: |
           ./scripts/release_build_windows_msi.ps1
 
+      - name: Validate MSI installer behavior
+        shell: powershell
+        env:
+          VERSION: ${{ needs.guard-main.outputs.version }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          ./scripts/validate_windows_msi.ps1 -MsiPath "dist/qrrun_${env:VERSION}_windows_${env:GOARCH}.msi" -GoArch $env:GOARCH
+
+      - name: Upload MSI validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-${{ matrix.goarch }}-msi-validation-logs
+          path: dist/msi-validation-logs/*.log
+          if-no-files-found: warn
+
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
         with:
