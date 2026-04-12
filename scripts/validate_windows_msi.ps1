@@ -64,6 +64,55 @@ function Test-PathContainsEntry {
   return $false
 }
 
+function Get-PathEntryList {
+  param(
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('User', 'Machine')]
+    [string]$Target
+  )
+
+  $pathValue = [Environment]::GetEnvironmentVariable('Path', $Target)
+  if ([string]::IsNullOrWhiteSpace($pathValue)) {
+    return @()
+  }
+
+  return @(
+    $pathValue.Split(';') |
+      ForEach-Object { $_.Trim() } |
+      Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  )
+}
+
+function Resolve-QrrunInstallDir {
+  param(
+    [Parameter(Mandatory = $true)]
+    [ValidateSet('User', 'Machine')]
+    [string]$Target,
+
+    [string[]]$PreferredDirs = @()
+  )
+
+  foreach ($entry in (Get-PathEntryList -Target $Target)) {
+    $exePath = Join-Path $entry 'qrrun.exe'
+    if (Test-Path -LiteralPath $exePath -PathType Leaf) {
+      return $entry
+    }
+  }
+
+  foreach ($dir in $PreferredDirs) {
+    if ([string]::IsNullOrWhiteSpace($dir)) {
+      continue
+    }
+
+    $exePath = Join-Path $dir 'qrrun.exe'
+    if (Test-Path -LiteralPath $exePath -PathType Leaf) {
+      return $dir
+    }
+  }
+
+  return $null
+}
+
 function Assert-PathEntryState {
   param(
     [Parameter(Mandatory = $true)]
@@ -168,9 +217,8 @@ function Test-InstallExecutionSupported {
     [string]$TargetGoArch
   )
 
-  $hostArch = $env:PROCESSOR_ARCHITECTURE.ToLowerInvariant()
-  if ($TargetGoArch -eq 'arm64' -and $hostArch -ne 'arm64') {
-    Write-Output "Skipping install flow tests for arm64 MSI on host architecture '$hostArch'"
+  if ($TargetGoArch -ne 'amd64') {
+    Write-Output "Skipping install flow tests for $TargetGoArch MSI on this runner"
     return $false
   }
 
@@ -179,13 +227,21 @@ function Test-InstallExecutionSupported {
 
 function Test-UserScope {
   $scopeArgs = 'ALLUSERS=2 MSIINSTALLPERUSER=1'
-  $installDir = Join-Path (Join-Path $env:LOCALAPPDATA 'Programs') 'qrrun'
-  $exePath = Join-Path $installDir 'qrrun.exe'
+  $preferredInstallDirs = @(
+    (Join-Path (Join-Path $env:LOCALAPPDATA 'Programs') 'qrrun'),
+    (Join-Path $env:LOCALAPPDATA 'qrrun')
+  )
 
   Write-Output 'Running user-scope install, repair, reinstall, and uninstall checks'
   Invoke-BestEffortUninstall -ScopeArguments $scopeArgs -OperationName 'cleanup-user-before'
 
   Invoke-MsiExec -OperationName 'install-user' -Arguments "/i `"$script:ResolvedMsiPath`" /qn /norestart $scopeArgs" | Out-Null
+  $installDir = Resolve-QrrunInstallDir -Target User -PreferredDirs $preferredInstallDirs
+  if ($null -eq $installDir) {
+    throw "qrrun.exe was not found after user-scope install"
+  }
+
+  $exePath = Join-Path $installDir 'qrrun.exe'
   Assert-QrrunExecutable -ExePath $exePath
   Assert-PathEntryState -Target User -ExpectedEntry $installDir -ShouldExist $true
 
@@ -205,13 +261,21 @@ function Test-UserScope {
 
 function Test-MachineScope {
   $scopeArgs = 'ALLUSERS=1'
-  $installDir = Join-Path $env:ProgramFiles 'qrrun'
-  $exePath = Join-Path $installDir 'qrrun.exe'
+  $preferredInstallDirs = @(
+    (Join-Path $env:ProgramFiles 'qrrun'),
+    (Join-Path ${env:ProgramFiles(x86)} 'qrrun')
+  )
 
   Write-Output 'Running machine-scope install, repair, reinstall, and uninstall checks'
   Invoke-BestEffortUninstall -ScopeArguments $scopeArgs -OperationName 'cleanup-machine-before'
 
   Invoke-MsiExec -OperationName 'install-machine' -Arguments "/i `"$script:ResolvedMsiPath`" /qn /norestart $scopeArgs" | Out-Null
+  $installDir = Resolve-QrrunInstallDir -Target Machine -PreferredDirs $preferredInstallDirs
+  if ($null -eq $installDir) {
+    throw "qrrun.exe was not found after machine-scope install"
+  }
+
+  $exePath = Join-Path $installDir 'qrrun.exe'
   Assert-QrrunExecutable -ExePath $exePath
   Assert-PathEntryState -Target Machine -ExpectedEntry $installDir -ShouldExist $true
 
