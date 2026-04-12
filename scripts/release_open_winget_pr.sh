@@ -3,6 +3,7 @@ set -euo pipefail
 
 VERSION="${VERSION:?VERSION is required}"
 WINGET_PKGS_PAT="${WINGET_PKGS_PAT:?WINGET_PKGS_PAT is required}"
+QRRUN_GITHUB_TOKEN="${QRRUN_GITHUB_TOKEN:?QRRUN_GITHUB_TOKEN is required}"
 SOURCE_REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 
 WINGET_FORK_REPO="${WINGET_FORK_REPO:-sakurai-youhei/winget-pkgs}"
@@ -122,6 +123,29 @@ git add "${MANIFEST_DIR}"
 git commit -m "Add ${PACKAGE_IDENTIFIER} version ${VERSION_NO_V}"
 git push --set-upstream origin "${BRANCH_NAME}"
 
+ISSUE_TITLE="Release: submit ${PACKAGE_IDENTIFIER} ${VERSION_NO_V} to winget-pkgs"
+EXISTING_ISSUE_NUMBER="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
+
+if [[ -n "${EXISTING_ISSUE_NUMBER}" && "${EXISTING_ISSUE_NUMBER}" != "null" ]]; then
+  ISSUE_URL="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
+else
+  ISSUE_BODY_FILE="${TMP_DIR}/qrrun-winget-release-issue.md"
+  cat >"${ISSUE_BODY_FILE}" <<EOF
+## Summary
+- Track winget-pkgs submission for ${PACKAGE_IDENTIFIER} ${VERSION_NO_V}
+
+## Release
+- qrrun release tag: ${VERSION}
+- source repo: https://github.com/${SOURCE_REPO}
+
+## winget-pkgs
+- package identifier: ${PACKAGE_IDENTIFIER}
+- target branch: ${BRANCH_NAME}
+EOF
+
+  ISSUE_URL="$(GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
+fi
+
 export GH_TOKEN="${WINGET_PKGS_PAT}"
 EXISTING_PR_NUMBER="$(gh pr list --repo "${WINGET_UPSTREAM_REPO}" --head "sakurai-youhei:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
 if [[ -n "${EXISTING_PR_NUMBER}" && "${EXISTING_PR_NUMBER}" != "null" ]]; then
@@ -151,4 +175,4 @@ fi
 gh pr comment \
   --repo "${WINGET_UPSTREAM_REPO}" \
   "${NEW_PR_NUMBER}" \
-  --body "@sakurai-youhei winget-pkgs PR is open. Please review and complete the checklist manually."
+  --body "@sakurai-youhei winget-pkgs PR is open. Please review and complete the checklist manually. qrrun tracking issue: ${ISSUE_URL}"
