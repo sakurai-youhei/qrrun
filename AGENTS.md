@@ -6,7 +6,7 @@ This file provides repository-level guidance for any coding agent (Copilot, Clau
 
 Use this playbook when asked to create a release (especially beta releases).
 
-### Goal
+### Objective
 
 Create a GitHub release by pushing a version tag that matches `v*`.
 This repository uses `.github/workflows/release.yml` for tag-triggered builds and release publishing.

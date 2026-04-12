@@ -46,10 +46,14 @@ repos:
     hooks:
       - id: checkmake
 
-  - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.14.0
+  - repo: local
     hooks:
-      - id: markdownlint-cli2
+      - id: gomarklint
+        name: gomarklint
+        entry: go run github.com/shinagawa-web/gomarklint@latest
+        language: system
+        args: [--config, .gomarklint.json]
+        files: \.md$
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.37.1
