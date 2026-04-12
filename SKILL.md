@@ -39,6 +39,7 @@ qrrun [flags] <script|-> [args...]
 ## Common Flags
 - --runtime string: Target runtime (default: pythonista3)
 - --transport string: Tunnel transport (default: cloudflared)
+- --transport-opts string: Extra args for the transport command
 - --print-url: Print only the runtime URL instead of QR code
 - --keep-serving: Keep serving until interrupted
 - --quiet-period duration: Quiet period before exit in default mode (default: 500ms)
