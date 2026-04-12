@@ -13,15 +13,14 @@ type Pythonista struct {
 }
 
 // QRCodeURL converts a raw script URL into a Pythonista 3 deep-link URL.
-func (p *Pythonista) QRCodeURL(publicURL string, bearerToken string, scriptArgv []string) string {
+func (p *Pythonista) QRCodeURL(publicURL string, _ string, scriptArgv []string) string {
 	argvLiteral := pythonStringListLiteral(scriptArgv)
 	code := fmt.Sprintf(
 		"import sys,urllib.request as u;a=sys.argv[:];sys.argv=%s\n"+
-			"try:eval(compile(u.urlopen(u.Request(%q,headers={\"Authorization\":\"Bearer %s\"})).read().decode(),\"<qrrun>\",\"exec\"),{\"__name__\":\"__main__\"})\n"+
+			"try:exec(u.urlopen(%q).read().decode(),{\"__name__\":\"__main__\"})\n"+
 			"finally:sys.argv=a",
 		argvLiteral,
 		publicURL,
-		bearerToken,
 	)
 	encoded := strings.ReplaceAll(url.QueryEscape(code), "+", " ")
 	return fmt.Sprintf("%s://?exec=%s", p.Scheme, encoded)

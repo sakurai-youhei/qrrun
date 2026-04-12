@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -40,6 +39,8 @@ type Server struct {
 	deliveryCh  chan struct{}
 	firstReq    sync.Once
 }
+
+const alphaNumChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 // New creates a Server that serves scriptBytes on a random free port.
 // The script is exposed at /<uuid-without-extension>.
@@ -122,7 +123,9 @@ func (s *Server) Serve(ctx context.Context) error {
 	mux.HandleFunc("/"+s.scriptID, func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(s.requestLog, "request: method=%s path=%s remote=%s\n", r.Method, r.URL.Path, r.RemoteAddr)
 		auth := strings.TrimSpace(r.Header.Get("Authorization"))
-		if auth != "Bearer "+s.bearerToken {
+		queryToken := strings.TrimSpace(r.URL.Query().Get("t"))
+		if auth != "Bearer "+s.bearerToken && queryToken != s.bearerToken {
+			time.Sleep(1 * time.Second)
 			w.Header().Set("WWW-Authenticate", "Bearer")
 			w.WriteHeader(http.StatusUnauthorized)
 			return
@@ -171,12 +174,31 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 func newScriptID() (string, error) {
-	raw := make([]byte, 16)
-	if _, err := rand.Read(raw); err != nil {
-		return "", err
+	b := make([]byte, 8)
+	for i := range b {
+		idx, err := randomAlphaNumIndex(len(alphaNumChars))
+		if err != nil {
+			return "", err
+		}
+		b[i] = alphaNumChars[idx]
 	}
-	// 32 hex chars, extensionless UUID-like identifier suitable for URL path.
-	return hex.EncodeToString(raw), nil
+	return string(b), nil
+}
+
+func randomAlphaNumIndex(max int) (int, error) {
+	if max <= 0 || max > 256 {
+		return 0, fmt.Errorf("invalid max: %d", max)
+	}
+	limit := byte(256 - (256 % max))
+	for {
+		var one [1]byte
+		if _, err := rand.Read(one[:]); err != nil {
+			return 0, err
+		}
+		if one[0] < limit {
+			return int(one[0]) % max, nil
+		}
+	}
 }
 
 type originTLSArtifacts struct {
