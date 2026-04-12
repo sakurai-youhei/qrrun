@@ -83,6 +83,12 @@ gvm use go1.24.13 --default
 make checks
 ```
 
+4. Install pre-commit hooks (recommended):
+
+```bash
+pre-commit install
+```
+
 ## Release
 
 For release operations, see [AGENTS.md](AGENTS.md).
