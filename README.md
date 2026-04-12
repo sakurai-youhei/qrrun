@@ -21,13 +21,13 @@ See [Cloudflare Quick Tunnel documentation](https://developers.cloudflare.com/cl
 Run with a local file:
 
 ```bash
-qrrun hello.py
+qrrun hello.py arg1 arg2
 ```
 
 Run from stdin (`-`):
 
 ```bash
-echo "print('Hello, QRrun!')" | qrrun -
+echo "print('Hello, QRrun!')" | qrrun - arg1 arg2
 ```
 
 By default, QRrun generates a QR code for opening and running your script in Pythonista3 via Cloudflare Quick Tunnels, unless you explicitly override `--transport` or `--runtime`.

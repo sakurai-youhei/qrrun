@@ -40,6 +40,7 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 
 	rawURL := "https://example.trycloudflare.com/hello.py"
 	bearerToken := "test-token-123"
+	scriptArgv := []string{"hello.py", "arg1", "arg2"}
 
 	for _, tc := range tests {
 		rt, err := runtime.New(tc.name)
@@ -47,7 +48,7 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 			t.Fatalf("unexpected error for %q: %v", tc.name, err)
 		}
 
-		got := rt.QRCodeURL(rawURL, bearerToken)
+		got := rt.QRCodeURL(rawURL, bearerToken, scriptArgv)
 		if !strings.HasPrefix(got, tc.scheme+"://") {
 			t.Errorf("expected %s:// scheme, got %q", tc.scheme, got)
 		}
@@ -68,14 +69,20 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to decode exec code for %q: %v (raw: %q)", tc.name, err, rawExec)
 		}
-		if !strings.HasPrefix(execCode, "import urllib.request as u;exec(") {
-			t.Errorf("expected urllib.request-based exec code prefix for %q, got %q", tc.name, execCode)
+		if !strings.Contains(execCode, "a=sys.argv[:]") {
+			t.Errorf("expected sys.argv backup in exec code for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, "u.urlopen(u.Request(") {
-			t.Errorf("expected urllib.request urlopen/request usage in exec code for %q, got %q", tc.name, execCode)
+		if !strings.Contains(execCode, "sys.argv=[\"hello.py\",\"arg1\",\"arg2\"]") {
+			t.Errorf("expected script argv overwrite in exec code for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, ".read().decode())") {
-			t.Errorf("expected decoded response execution suffix in exec code for %q, got %q", tc.name, execCode)
+		if !strings.Contains(execCode, "eval(") || !strings.Contains(execCode, "compile(") || !strings.Contains(execCode, "u.urlopen(u.Request(") {
+			t.Errorf("expected eval(compile(u.urlopen(u.Request(...)))) in exec code for %q, got %q", tc.name, execCode)
+		}
+		if !strings.Contains(execCode, "finally:") || !strings.Contains(execCode, "sys.argv=a") {
+			t.Errorf("expected sys.argv restore in finally for %q, got %q", tc.name, execCode)
+		}
+		if !strings.Contains(execCode, "import sys,urllib.request as u") {
+			t.Errorf("expected urllib import in exec code for %q, got %q", tc.name, execCode)
 		}
 		if !strings.Contains(execCode, "Authorization") {
 			t.Errorf("expected Authorization header in exec code for %q, got %q", tc.name, execCode)

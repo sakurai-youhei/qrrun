@@ -3,8 +3,8 @@
 //
 // Usage:
 //
-//	qrrun your-local-script.py
-//	echo "print('hello')" | qrrun -
+//	qrrun your-local-script.py arg1 arg2
+//	echo "print('hello')" | qrrun - arg1 arg2
 package main
 
 import (
@@ -43,7 +43,7 @@ func newRootCmd() *cobra.Command {
 	var transportOpts string
 
 	cmd := &cobra.Command{
-		Use:   "qrrun [flags] <script|-]",
+		Use:   "qrrun [flags] <script|-> [args...]",
 		Short: "tunnel local scripts and run via QR",
 		Long: `QRrun serves a local script through a secure tunnel and prints a QR code.
 
@@ -54,15 +54,18 @@ Prerequisites:
 	QRrun uses Cloudflare Quick Tunnels (trycloudflare.com)
 
 Examples:
-	qrrun hello.py
-	echo "print('hello')" | qrrun -`,
-		Args: cobra.ExactArgs(1),
+	qrrun hello.py arg1 arg2
+	echo "print('hello')" | qrrun - arg1 arg2`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			keepServingMode := keepServing
+			scriptPath := args[0]
+			scriptArgs := append([]string(nil), args[1:]...)
 			return app.Run(app.Options{
 				TransportName:   transportName,
 				RuntimeName:     runtimeName,
-				ScriptPath:      args[0],
+				ScriptPath:      scriptPath,
+				ScriptArgs:      scriptArgs,
 				KeepServing:     keepServingMode,
 				ExitQuietPeriod: exitQuietPeriod,
 				Debug:           debug,

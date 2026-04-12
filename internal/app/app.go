@@ -27,6 +27,7 @@ type Options struct {
 	TransportName   string
 	RuntimeName     string
 	ScriptPath      string
+	ScriptArgs      []string
 	KeepServing     bool
 	ExitQuietPeriod time.Duration
 	Debug           bool
@@ -154,7 +155,14 @@ func Run(opts Options) error {
 
 	// Build the QR code URL: replace the local base URL with the public one,
 	// then let the runtime wrap it in the appropriate URL scheme.
-	scriptPublicURL := rt.QRCodeURL(replaceBase(srv.ScriptURL(), publicURL), bearerToken)
+	scriptArgv := make([]string, 0, 1+len(opts.ScriptArgs))
+	scriptArgv = append(scriptArgv, opts.ScriptPath)
+	scriptArgv = append(scriptArgv, opts.ScriptArgs...)
+	scriptPublicURL := rt.QRCodeURL(
+		replaceBase(srv.ScriptURL(), publicURL),
+		bearerToken,
+		scriptArgv,
+	)
 
 	if opts.PrintURL {
 		fmt.Fprintln(opts.Output, scriptPublicURL)
