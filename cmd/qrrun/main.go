@@ -82,6 +82,18 @@ Examples:
 
 	cmd.Version = fmt.Sprintf("%s (commit: %s, built: %s)", version, commit, date)
 	cmd.SetVersionTemplate("{{.Version}}\n")
+	cmd.SetUsageTemplate(`Usage:
+  {{.UseLine}}
+
+{{if .HasAvailableFlags}}Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
+
+Supported QR error correction levels:
+	` + app.SupportedQRErrorLevelsText() + `
+
+Supported runtimes:
+	pythonista, pythonista2, pythonista3
+{{end}}`)
 
 	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,
 		`keep serving requests until interrupted`)
@@ -89,8 +101,8 @@ Examples:
 		`quiet period before exit`)
 	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
 		`target runtime`)
-	cmd.Flags().StringVar(&qrLevel, "qr-level", "M",
-		`QR error correction level: L, M, Q, or H`)
+	cmd.Flags().StringVar(&qrLevel, "qr-level", app.DefaultQRErrorLevel,
+		`QR error correction level`)
 	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
 		`tunnel transport`)
 	cmd.Flags().StringVar(&transportOpts, "transport-opts", "",

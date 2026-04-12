@@ -9,21 +9,39 @@ import (
 // Pythonista produces URLs for Pythonista runtimes.
 // It embeds Python code via the `exec` URL parameter.
 type Pythonista struct {
-	Scheme string
+	Scheme  string
+	Python2 bool
 }
 
-// QRCodeURL converts a raw script URL into a Pythonista 3 deep-link URL.
+// QRCodeURL converts a raw script URL into a Pythonista deep-link URL.
 func (p *Pythonista) QRCodeURL(publicURL string, _ string, scriptArgv []string) string {
 	argvLiteral := pythonStringListLiteral(scriptArgv)
-	code := fmt.Sprintf(
+	code := pythonista3ExecCode(publicURL, argvLiteral)
+	if p.Python2 {
+		code = pythonista2ExecCode(publicURL, argvLiteral)
+	}
+	encoded := strings.ReplaceAll(url.QueryEscape(code), "+", " ")
+	return fmt.Sprintf("%s://?exec=%s", p.Scheme, encoded)
+}
+
+func pythonista3ExecCode(publicURL, argvLiteral string) string {
+	return fmt.Sprintf(
 		"import sys,urllib.request as u;a=sys.argv[:];sys.argv=%s\n"+
 			"try:exec(u.urlopen(%q).read().decode(),{\"__name__\":\"__main__\"})\n"+
 			"finally:sys.argv=a",
 		argvLiteral,
 		publicURL,
 	)
-	encoded := strings.ReplaceAll(url.QueryEscape(code), "+", " ")
-	return fmt.Sprintf("%s://?exec=%s", p.Scheme, encoded)
+}
+
+func pythonista2ExecCode(publicURL, argvLiteral string) string {
+	return fmt.Sprintf(
+		"import sys,urllib2 as u;a=sys.argv[:];sys.argv=%s\n"+
+			"try:exec u.urlopen(%q).read() in {\"__name__\":\"__main__\"}\n"+
+			"finally:sys.argv=a",
+		argvLiteral,
+		publicURL,
+	)
 }
 
 func pythonStringListLiteral(values []string) string {

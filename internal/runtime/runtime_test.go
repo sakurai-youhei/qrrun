@@ -30,12 +30,13 @@ func TestNew_UnknownRuntime(t *testing.T) {
 
 func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 	tests := []struct {
-		name   string
-		scheme string
+		name      string
+		scheme    string
+		isPython2 bool
 	}{
-		{name: "pythonista", scheme: "pythonista"},
-		{name: "pythonista2", scheme: "pythonista2"},
-		{name: "pythonista3", scheme: "pythonista3"},
+		{name: "pythonista", scheme: "pythonista", isPython2: false},
+		{name: "pythonista2", scheme: "pythonista2", isPython2: true},
+		{name: "pythonista3", scheme: "pythonista3", isPython2: false},
 	}
 
 	rawURL := "https://example.trycloudflare.com/hello.py"
@@ -75,14 +76,26 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if !strings.Contains(execCode, "sys.argv=[\"hello.py\",\"arg1\",\"arg2\"]") {
 			t.Errorf("expected script argv overwrite in exec code for %q, got %q", tc.name, execCode)
 		}
-		if !strings.Contains(execCode, "exec(u.urlopen(") {
-			t.Errorf("expected exec(u.urlopen(...)) in exec code for %q, got %q", tc.name, execCode)
+		if tc.isPython2 {
+			if !strings.Contains(execCode, "import sys,urllib2 as u") {
+				t.Errorf("expected urllib2 import in exec code for %q, got %q", tc.name, execCode)
+			}
+			if !strings.Contains(execCode, "exec u.urlopen(") || !strings.Contains(execCode, ").read() in {") {
+				t.Errorf("expected Python2 exec statement in exec code for %q, got %q", tc.name, execCode)
+			}
+			if strings.Contains(execCode, ".decode()") {
+				t.Errorf("did not expect decode() in python2 exec code for %q, got %q", tc.name, execCode)
+			}
+		} else {
+			if !strings.Contains(execCode, "import sys,urllib.request as u") {
+				t.Errorf("expected urllib.request import in exec code for %q, got %q", tc.name, execCode)
+			}
+			if !strings.Contains(execCode, "exec(u.urlopen(") || !strings.Contains(execCode, ".read().decode()") {
+				t.Errorf("expected Python3 exec(u.urlopen(...).read().decode()) in exec code for %q, got %q", tc.name, execCode)
+			}
 		}
 		if !strings.Contains(execCode, "finally:") || !strings.Contains(execCode, "sys.argv=a") {
 			t.Errorf("expected sys.argv restore in finally for %q, got %q", tc.name, execCode)
-		}
-		if !strings.Contains(execCode, "import sys,urllib.request as u") {
-			t.Errorf("expected urllib import in exec code for %q, got %q", tc.name, execCode)
 		}
 		if strings.Contains(execCode, "requests") {
 			t.Errorf("did not expect requests dependency in exec code for %q, got %q", tc.name, execCode)
