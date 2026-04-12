@@ -322,5 +322,6 @@ jobs:
           VERSION: ${{ needs.guard-main.outputs.version }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           HOMEBREW_TAP_PAT: ${{ secrets.HOMEBREW_TAP_PAT }}
+          QRRUN_GITHUB_TOKEN: ${{ github.token }}
         run: |
           bash ./scripts/release_open_homebrew_tap_pr.sh
