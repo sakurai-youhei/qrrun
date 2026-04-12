@@ -15,17 +15,17 @@ curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/i
 ## Windows
 
 ```cmd
-curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd
+winget install --id sakurai-youhei.qrrun --source winget
 ```
 
 Install a specific version:
 
 ```cmd
-curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd v0.1.0-beta.1
+winget install --id sakurai-youhei.qrrun --version 0.1.3 --source winget
 ```
 
 Install system-wide:
 
 ```cmd
-curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd v0.1.0-beta.1 machine
+winget install --id sakurai-youhei.qrrun --scope machine --source winget
 ```
