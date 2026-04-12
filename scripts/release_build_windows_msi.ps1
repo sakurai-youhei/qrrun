@@ -1,18 +1,26 @@
 $ErrorActionPreference = 'Stop'
 
 $date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-$commit = "${env:GITHUB_SHA}".Substring(0, 7)
-$base = "qrrun_${env:VERSION}_windows_${env:GOARCH}"
+$githubSha = "${env:GITHUB_SHA}"
+$commit = "unknown"
+if (-not [string]::IsNullOrEmpty($githubSha) -and $githubSha.Length -ge 7) {
+  $commit = $githubSha.Substring(0, 7)
+}
+$effectiveVersion = "${env:VERSION}"
+if ([string]::IsNullOrWhiteSpace($effectiveVersion)) {
+  $effectiveVersion = "v0.0.0-dev"
+}
+$base = "qrrun_${effectiveVersion}_windows_${env:GOARCH}"
 
 New-Item -ItemType Directory -Path dist -Force | Out-Null
 
 $env:CGO_ENABLED = "0"
 $env:GOOS = "windows"
-go build -trimpath -ldflags "-s -w -X 'main.version=${env:VERSION}' -X 'main.commit=${commit}' -X 'main.date=${date}'" -o "dist/${base}.exe" ./cmd/qrrun
+go build -trimpath -ldflags "-s -w -X 'main.version=${effectiveVersion}' -X 'main.commit=${commit}' -X 'main.date=${date}'" -o "dist/${base}.exe" ./cmd/qrrun
 
-$match = [regex]::Match($env:VERSION, '^[vV]?(\d+)\.(\d+)\.(\d+)(?:-[A-Za-z]+\.(\d+))?')
+$match = [regex]::Match($effectiveVersion, '^[vV]?(\d+)\.(\d+)\.(\d+)(?:-[A-Za-z]+\.(\d+))?')
 if (-not $match.Success) {
-  throw "Tag '$env:VERSION' must start with SemVer core (e.g. v1.2.3) for MSI versioning"
+  throw "Tag '${effectiveVersion}' must start with SemVer core (e.g. v1.2.3) for MSI versioning"
 }
 
 $major = [int]$match.Groups[1].Value
