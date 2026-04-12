@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import os
+import queue
 import secrets
-import select
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import unittest
 from functools import cached_property
@@ -20,6 +21,19 @@ def terminate_proc_gracefully(proc: subprocess.Popen) -> None:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
+
+
+def readline(stream, *, timeout: float) -> str:
+    result: queue.Queue[str] = queue.Queue(maxsize=1)
+    thread = threading.Thread(
+        target=lambda: result.put(stream.readline()), daemon=True
+    )
+    thread.start()
+
+    try:
+        return result.get(timeout=timeout)
+    except queue.Empty as exc:
+        raise TimeoutError("timed out waiting for qrrun URL output") from exc
 
 
 class TestE2EPrintURL(unittest.TestCase):
@@ -84,13 +98,10 @@ class TestE2EPrintURL(unittest.TestCase):
 
         qrrun.stdin.write(self.script)
         qrrun.stdin.close()
-        ready, _, _ = select.select([qrrun.stdout], [], [], 30.0)
-        if not ready:
-            self.fail("timed out waiting for qrrun URL output")
 
-        url_line = qrrun.stdout.readline().strip()
+        url_line = readline(qrrun.stdout, timeout=30.0).strip()
         if not url_line:
-            self.fail("qrrun exited without producing URL")
+            self.fail("qrrun outputs a valid URL")
 
         self.assertRegex(
             url_line,
