@@ -52,10 +52,12 @@ brew install --formula https://github.com/sakurai-youhei/qrrun/releases/latest/d
 Install a specific version (direct formula URL):
 
 ```bash
-brew install --formula https://github.com/sakurai-youhei/qrrun/releases/download/v0.1.3/qrrun.rb
+brew install --formula https://github.com/sakurai-youhei/qrrun/releases/download/v<version>/qrrun.rb
 ```
 
-## Windows
+## Windows (winget)
+
+Install with winget (recommended):
 
 ```cmd
 winget install --id sakurai-youhei.qrrun --source winget
@@ -64,11 +66,11 @@ winget install --id sakurai-youhei.qrrun --source winget
 Install a specific version:
 
 ```cmd
-winget install --id sakurai-youhei.qrrun --version 0.1.3 --source winget
+winget install --id sakurai-youhei.qrrun --source winget --version <version>
 ```
 
 Install system-wide:
 
 ```cmd
-winget install --id sakurai-youhei.qrrun --scope machine --source winget
+winget install --id sakurai-youhei.qrrun --source winget --scope machine
 ```
