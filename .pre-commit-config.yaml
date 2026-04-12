@@ -36,6 +36,16 @@ repos:
       - id: ruff-format
         files: \.py$
 
+  - repo: https://github.com/tox-dev/pyproject-fmt
+    rev: v2.9.0
+    hooks:
+      - id: pyproject-fmt
+
+  - repo: https://github.com/checkmake/checkmake
+    rev: v0.3.2
+    hooks:
+      - id: checkmake
+
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.14.0
     hooks:
