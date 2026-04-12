@@ -1,20 +1,48 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DEB_VERSION="${VERSION#v}"
-RPM_ARCH="$GOARCH"
-if [ "$GOARCH" = "amd64" ]; then
+VERSION="${VERSION:?VERSION is required}"
+GOARCH="${GOARCH:?GOARCH is required}"
+BIN="${BIN:?BIN is required}"
+
+SCRIPT_NAME="$(basename "$0")"
+log() {
+  echo "[${SCRIPT_NAME}] $*"
+}
+
+require_tool() {
+  local tool="$1"
+  if ! command -v "${tool}" >/dev/null 2>&1; then
+    log "Required tool is not installed: ${tool}"
+    exit 1
+  fi
+}
+
+require_tool fpm
+
+if [[ ! -f "dist/${BIN}" ]]; then
+  log "Binary not found: dist/${BIN}"
+  exit 1
+fi
+
+PKG_VERSION="${VERSION#v}"
+RPM_ARCH="${GOARCH}"
+if [[ "${GOARCH}" == "amd64" ]]; then
   RPM_ARCH="x86_64"
-elif [ "$GOARCH" = "arm64" ]; then
+elif [[ "${GOARCH}" == "arm64" ]]; then
   RPM_ARCH="aarch64"
+else
+  log "Unsupported GOARCH for RPM packaging: ${GOARCH}"
+  exit 1
 fi
 
-RPM_VERSION="${DEB_VERSION%%-*}"
+RPM_VERSION="${PKG_VERSION%%-*}"
 RPM_RELEASE="1"
-if [ "${DEB_VERSION}" != "${RPM_VERSION}" ]; then
-  RPM_RELEASE="0.$(echo "${DEB_VERSION#"${RPM_VERSION}"-}" | tr -c '[:alnum:].' '.' | sed 's/[.]\+$//')"
+if [[ "${PKG_VERSION}" != "${RPM_VERSION}" ]]; then
+  RPM_RELEASE="0.$(echo "${PKG_VERSION#"${RPM_VERSION}"-}" | tr -c '[:alnum:].' '.' | sed 's/[.]\+$//')"
 fi
 
+log "Building RPM package for ${RPM_ARCH} (version ${RPM_VERSION}-${RPM_RELEASE})"
 fpm \
   -s dir \
   -t rpm \
@@ -24,5 +52,6 @@ fpm \
   --architecture "${RPM_ARCH}" \
   --license MIT \
   --description "Tunnel local code and run it via QR." \
-  --package "dist/qrrun_${DEB_VERSION}_${RPM_ARCH}.rpm" \
+  --package "dist/qrrun_${PKG_VERSION}_${RPM_ARCH}.rpm" \
   "dist/${BIN}=/usr/bin/qrrun"
+log "RPM package built successfully"
