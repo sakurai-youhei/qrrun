@@ -1,4 +1,4 @@
-.PHONY: help all build test checks test-e2e lint vet pre-commit-install pre-commit-run clean
+.PHONY: help all build test test-e2e lint vet pre-commit-install pre-commit-run clean
 
 .DEFAULT_GOAL := build
 
@@ -24,9 +24,6 @@ build:
 ## test: run all tests
 test:
 	go test ./...
-
-## checks: run CI-like local checks (test, vet, build, lint)
-checks: test vet build lint
 
 ## test-e2e: run local --print-url end-to-end test via cloudflared
 test-e2e: build
