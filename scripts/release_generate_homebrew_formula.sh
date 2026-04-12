@@ -10,7 +10,7 @@ SHA_ARM64="$(sha256sum "dist/${DARWIN_ARM64}" | awk '{print $1}')"
 
 mkdir -p dist/homebrew
 
-cat > dist/homebrew/qrrun.rb <<EOF
+cat >dist/homebrew/qrrun.rb <<EOF
 class Qrrun < Formula
   desc "Tunnel local code and run it via QR"
   homepage "https://github.com/${REPO}"

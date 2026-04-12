@@ -12,7 +12,7 @@ fi
 RPM_VERSION="${DEB_VERSION%%-*}"
 RPM_RELEASE="1"
 if [ "${DEB_VERSION}" != "${RPM_VERSION}" ]; then
-  RPM_RELEASE="0.$(echo "${DEB_VERSION#${RPM_VERSION}-}" | tr -c '[:alnum:].' '.' | sed 's/[.]\+$//')"
+  RPM_RELEASE="0.$(echo "${DEB_VERSION#"${RPM_VERSION}"-}" | tr -c '[:alnum:].' '.' | sed 's/[.]\+$//')"
 fi
 
 fpm \
