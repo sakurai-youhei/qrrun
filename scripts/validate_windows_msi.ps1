@@ -8,15 +8,6 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function ConvertTo-NormalizedGuid {
-  param(
-    [Parameter(Mandatory = $true)]
-    [string]$GuidValue
-  )
-
-  return $GuidValue.Trim().TrimStart('{').TrimEnd('}').ToUpperInvariant()
-}
-
 function Get-MsiPropertyValue {
   param(
     [Parameter(Mandatory = $true)]
@@ -259,7 +250,12 @@ if ($productVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') {
 }
 
 $expectedUpgradeCode = 'B1A2C8E2-3E4B-4F93-ABF7-D39C45FB0C6D'
-if ((ConvertTo-NormalizedGuid -GuidValue $upgradeCode) -ne $expectedUpgradeCode) {
+if ([string]::IsNullOrWhiteSpace([string]$upgradeCode)) {
+  throw 'UpgradeCode property is empty'
+}
+
+$normalizedUpgradeCode = ([string]$upgradeCode).Trim().TrimStart('{').TrimEnd('}').ToUpperInvariant()
+if ($normalizedUpgradeCode -ne $expectedUpgradeCode) {
   throw "Unexpected UpgradeCode '$upgradeCode'"
 }
 
