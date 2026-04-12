@@ -10,6 +10,10 @@ repos:
         files: \.py$
       - id: check-merge-conflict
       - id: check-yaml
+      - id: check-xml
+        types: [file]
+        files: \.wxs$
+        exclude: ^dist/
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: mixed-line-ending
