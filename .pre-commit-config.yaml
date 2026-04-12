@@ -3,16 +3,48 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-added-large-files
+      - id: check-ast
+        files: \.py$
+      - id: check-shebang-scripts-are-executable
+      - id: debug-statements
+        files: \.py$
       - id: check-merge-conflict
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: mixed-line-ending
 
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        files: \.sh$
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.8.0-1
+    hooks:
+      - id: shfmt
+        args: [-w, -i, "2", -ci]
+        files: \.sh$
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.8
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: \.py$
+      - id: ruff-format
+        files: \.py$
+
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.14.0
     hooks:
       - id: markdownlint-cli2
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.64.8
+    hooks:
+      - id: golangci-lint-full
 
   - repo: local
     hooks:
@@ -21,6 +53,29 @@ repos:
         entry: gofmt -w
         language: system
         files: \.go$
+
+      - id: ty
+        name: ty
+        entry: ty check
+        language: python
+        additional_dependencies:
+          - ty
+        files: \.py$
+
+      - id: blinter
+        name: blinter
+        entry: blinter .
+        language: python
+        additional_dependencies:
+          - Blinter
+        pass_filenames: false
+        files: \.(bat|cmd)$
+
+      - id: psscriptanalyzer
+        name: PSScriptAnalyzer
+        language: system
+        entry: pwsh -NoLogo -NoProfile -NonInteractive -File scripts/precommit_psscriptanalyzer.ps1
+        files: \.ps1$
 
       - id: go-vet
         name: go vet
@@ -31,11 +86,5 @@ repos:
       - id: go-test
         name: go test
         entry: go test ./...
-        language: system
-        pass_filenames: false
-
-      - id: golangci-lint
-        name: golangci-lint
-        entry: sh -c 'if command -v golangci-lint >/dev/null 2>&1; then golangci-lint run ./...; else go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run ./...; fi'
         language: system
         pass_filenames: false
