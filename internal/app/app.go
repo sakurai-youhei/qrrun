@@ -25,6 +25,7 @@ import (
 type Options struct {
 	TransportName   string
 	RuntimeName     string
+	QRErrorLevel    string
 	ScriptPath      string
 	ScriptArgs      []string
 	KeepServing     bool
@@ -54,6 +55,10 @@ func Run(opts Options) error {
 	}
 	if opts.Output == nil {
 		opts.Output = os.Stdout
+	}
+	qrLevel, err := parseQRErrorLevel(opts.QRErrorLevel)
+	if err != nil {
+		return err
 	}
 	statusOutput := io.Writer(os.Stderr)
 	quietPeriod := opts.ExitQuietPeriod
@@ -169,7 +174,7 @@ func Run(opts Options) error {
 	if opts.PrintURL {
 		fmt.Fprintln(opts.Output, scriptPublicURL)
 	} else {
-		if err := renderCompactQRCode(opts.Output, scriptPublicURL); err != nil {
+		if err := renderCompactQRCode(opts.Output, scriptPublicURL, qrLevel); err != nil {
 			return fmt.Errorf("render qr: %w", err)
 		}
 		if opts.KeepServing {
@@ -320,8 +325,23 @@ func replaceBase(rawURL, publicBase string) string {
 	return rawParsed.String()
 }
 
-func renderCompactQRCode(w io.Writer, content string) error {
-	code, err := qr.Encode(content, qr.M)
+func parseQRErrorLevel(level string) (qr.Level, error) {
+	switch strings.ToUpper(strings.TrimSpace(level)) {
+	case "", "M":
+		return qr.M, nil
+	case "L":
+		return qr.L, nil
+	case "Q":
+		return qr.Q, nil
+	case "H":
+		return qr.H, nil
+	default:
+		return 0, fmt.Errorf("invalid qr level %q: must be one of L, M, Q, H", level)
+	}
+}
+
+func renderCompactQRCode(w io.Writer, content string, level qr.Level) error {
+	code, err := qr.Encode(content, level)
 	if err != nil {
 		return err
 	}

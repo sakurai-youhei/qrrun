@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/sakurai-youhei/qrrun/internal/app"
@@ -41,5 +42,17 @@ func TestRun_InvalidScriptPath(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for invalid script path")
+	}
+}
+
+func TestRun_InvalidQRErrorLevel(t *testing.T) {
+	err := app.Run(app.Options{
+		QRErrorLevel: "X",
+		ScriptPath:   "-",
+		Input:        strings.NewReader("print('ok')\n"),
+		Output:       io.Discard,
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid qr level")
 	}
 }
