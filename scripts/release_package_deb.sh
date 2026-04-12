@@ -9,7 +9,7 @@ PKG_ROOT="dist/${DEB_BASE}"
 mkdir -p "${PKG_ROOT}/DEBIAN" "${PKG_ROOT}/usr/bin"
 install -m 0755 "dist/${BIN}" "${PKG_ROOT}/usr/bin/qrrun"
 
-cat > "${PKG_ROOT}/DEBIAN/control" <<EOF
+cat >"${PKG_ROOT}/DEBIAN/control" <<EOF
 Package: qrrun
 Version: ${DEB_VERSION}
 Section: utils
