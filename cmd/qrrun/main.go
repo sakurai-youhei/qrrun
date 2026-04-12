@@ -34,6 +34,7 @@ func main() {
 func newRootCmd() *cobra.Command {
 	var transportName string
 	var runtimeName string
+	var qrLevel string
 	var keepServing bool
 	var exitQuietPeriod time.Duration
 	var transportStderr bool
@@ -64,6 +65,7 @@ Examples:
 			return app.Run(app.Options{
 				TransportName:   transportName,
 				RuntimeName:     runtimeName,
+				QRErrorLevel:    qrLevel,
 				ScriptPath:      scriptPath,
 				ScriptArgs:      scriptArgs,
 				KeepServing:     keepServingMode,
@@ -87,6 +89,8 @@ Examples:
 		`quiet period before exit`)
 	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
 		`target runtime`)
+	cmd.Flags().StringVar(&qrLevel, "qr-level", "M",
+		`QR error correction level: L, M, Q, or H`)
 	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
 		`tunnel transport`)
 	cmd.Flags().StringVar(&transportOpts, "transport-opts", "",
