@@ -85,4 +85,4 @@ make checks
 
 ## Release
 
-For release operations (including beta releases), see [AGENTS.md](AGENTS.md).
+For release operations, see [AGENTS.md](AGENTS.md).
