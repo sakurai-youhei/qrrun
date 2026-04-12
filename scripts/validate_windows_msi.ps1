@@ -20,7 +20,7 @@ function Write-Step {
     [string]$Message
   )
 
-  Write-Output "[validate-msi] $Message"
+  Write-Information "[validate-msi] $Message" -InformationAction Continue
 }
 
 function Get-MsiPropertyValue {
