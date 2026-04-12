@@ -1,4 +1,4 @@
-.PHONY: help build test checks e2e-print-url lint vet pre-commit-install pre-commit-run clean
+.PHONY: help all build test checks test-e2e lint vet pre-commit-install pre-commit-run clean
 
 .DEFAULT_GOAL := build
 
@@ -14,6 +14,9 @@ LDFLAGS := -X 'main.version=$(VERSION)' -X 'main.commit=$(COMMIT)' -X 'main.date
 help:
 	@awk '/^## / {desc=substr($$0, 4); next} /^[a-zA-Z0-9_.-]+:/ {if (desc != "") {split($$1, t, ":"); printf "%-16s %s\n", t[1], desc; desc=""}}' $(MAKEFILE_LIST)
 
+## all: default aggregate target
+all: build
+
 ## build: compile the binary
 build:
 	go build -ldflags "$(LDFLAGS)" -o $(BINARY) $(CMD)
@@ -25,9 +28,9 @@ test:
 ## checks: run CI-like local checks (test, vet, build, lint)
 checks: test vet build lint
 
-## e2e-print-url: run local --print-url end-to-end test via cloudflared
-e2e-print-url: build
-	bash ./scripts/e2e_url_only.sh
+## test-e2e: run local --print-url end-to-end test via cloudflared
+test-e2e: build
+	python3 -m unittest scripts/e2e_print_url.py
 
 ## lint: run golangci-lint (uses go run fallback when not installed)
 lint:
