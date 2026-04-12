@@ -55,3 +55,82 @@ jobs:
           else
             go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 run ./...
           fi
+
+  e2e-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install cloudflared
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL -o cloudflared.deb \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+          cloudflared --version
+
+      - name: Run E2E test
+        shell: bash
+        run: |
+          make test-e2e
+
+  e2e-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Setup make
+        shell: pwsh
+        run: |
+          choco install make -y
+          make --version
+
+      - name: Install cloudflared
+        shell: pwsh
+        run: |
+          winget install --id Cloudflare.cloudflared --exact --silent --accept-package-agreements --accept-source-agreements
+
+          $candidates = @(
+            "${env:ProgramFiles}\\cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles}\\Cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles}\\Cloudflare\\Cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles(x86)}\\cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles(x86)}\\Cloudflared\\cloudflared.exe",
+            "${env:ProgramFiles(x86)}\\Cloudflare\\Cloudflared\\cloudflared.exe"
+          )
+
+          $exe = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $exe) {
+            throw "cloudflared.exe was installed but could not be located"
+          }
+
+          (Split-Path -Parent $exe) | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          & $exe --version
+
+      - name: Run E2E test
+        shell: bash
+        run: |
+          make test-e2e
