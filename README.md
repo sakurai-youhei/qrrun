@@ -1,7 +1,7 @@
 # QRrun
 
 [![CI](https://github.com/sakurai-youhei/qrrun/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sakurai-youhei/qrrun/actions/workflows/ci.yml)
-[![Release](https://github.com/sakurai-youhei/qrrun/actions/workflows/release.yml/badge.svg)](https://github.com/sakurai-youhei/qrrun/actions/workflows/release.yml)
+[![CodeQL](https://img.shields.io/github/checks-status/sakurai-youhei/qrrun/main?label=CodeQL)](https://github.com/sakurai-youhei/qrrun/security/code-scanning)
 [![Latest Release](https://img.shields.io/github/v/release/sakurai-youhei/qrrun)](https://github.com/sakurai-youhei/qrrun/releases)
 [![License](https://img.shields.io/github/license/sakurai-youhei/qrrun)](LICENSE)
 
