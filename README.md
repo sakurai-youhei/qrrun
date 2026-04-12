@@ -38,11 +38,6 @@ See [INSTALL.md](INSTALL.md).
 ## Development Setup
 
 1. Install [mise](https://mise.jdx.dev/):
-
-```bash
-eval "$(mise activate bash)"
-```
-
 2. Trust `mise.toml` (one-time setup):
 
 ```bash
