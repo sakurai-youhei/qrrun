@@ -264,7 +264,7 @@ jobs:
     if: needs.guard-main.outputs.on_main == 'true' && !contains(needs.guard-main.outputs.version, '-alpha') && !contains(needs.guard-main.outputs.version, '-beta') && !contains(needs.guard-main.outputs.version, '-rc')
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check WINGET_PKGS_PAT
         id: token
