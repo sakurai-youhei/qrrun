@@ -5,6 +5,7 @@ import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import unittest
@@ -73,11 +74,16 @@ class TestE2EPrintURL(unittest.TestCase):
         )
 
     def test_validate_url_roundtrip(self) -> None:
+        qrrun_stderr = tempfile.TemporaryFile(mode="w+t")
+        self.addCleanup(qrrun_stderr.close)
+
         qrrun = subprocess.Popen(
             [
                 self.qrrun_bin,
                 "--transport",
                 "cloudflared",
+                "--transport-stderr",
+                "--debug",
                 "--runtime",
                 "pythonista3",
                 "--print-url",
@@ -85,7 +91,7 @@ class TestE2EPrintURL(unittest.TestCase):
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=qrrun_stderr,
             text=True,
         )
         self.addCleanup(terminate_proc_gracefully, qrrun)
@@ -99,9 +105,20 @@ class TestE2EPrintURL(unittest.TestCase):
         qrrun.stdin.write(self.script)
         qrrun.stdin.close()
 
-        url_line = readline(qrrun.stdout, timeout=30.0).strip()
+        try:
+            url_line = readline(qrrun.stdout, timeout=30.0).strip()
+        except TimeoutError as exc:
+            qrrun_stderr.seek(0)
+            stderr_text = qrrun_stderr.read().strip()
+            self.fail(f"{exc}; qrrun stderr: {stderr_text!r}")
+
         if not url_line:
-            self.fail("qrrun outputs a valid URL")
+            qrrun_stderr.seek(0)
+            stderr_text = qrrun_stderr.read().strip()
+            self.fail(
+                "qrrun does not output a valid URL; "
+                f"qrrun stderr: {stderr_text!r}"
+            )
 
         self.assertRegex(
             url_line,
