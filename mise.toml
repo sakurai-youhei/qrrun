@@ -1,0 +1,4 @@
+[tools]
+golang = "1.26.2"
+python = "3.14.4"
+powershell-core = "7.6.0"

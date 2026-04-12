@@ -37,15 +37,16 @@ See [INSTALL.md](INSTALL.md).
 
 ## Development Setup
 
-This project uses Go `1.24.13`.
-
-1. If gvm is not installed, follow the [gvm official installation guide](https://github.com/moovweb/gvm?tab=readme-ov-file#installing).
-
-2. Install and activate the required Go version:
+1. Install [mise](https://mise.jdx.dev/):
 
 ```bash
-gvm install go1.24.13
-gvm use go1.24.13 --default
+eval "$(mise activate bash)"
+```
+
+2. Trust `mise.toml` (one-time setup):
+
+```bash
+mise trust mise.toml
 ```
 
 3. Install pre-commit hooks (highly recommended):

@@ -1,6 +1,6 @@
 module github.com/sakurai-youhei/qrrun
 
-go 1.24.13
+go 1.26.2
 
 require (
 	github.com/mdp/qrterminal/v3 v3.2.1
