@@ -1,5 +1,6 @@
 param(
   [Parameter(Mandatory = $true)]
+  [ValidateNotNullOrEmpty()]
   [string]$MsiPath,
 
   [ValidateSet('amd64', 'arm64')]
@@ -7,6 +8,20 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+
+if ($PSVersionTable.PSVersion.Major -ge 7) {
+  $PSNativeCommandUseErrorActionPreference = $true
+}
+
+function Write-Step {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$Message
+  )
+
+  Write-Output "[validate-msi] $Message"
+}
 
 function Get-MsiPropertyValue {
   param(
@@ -182,13 +197,13 @@ function Write-MsiLogOnFailure {
   )
 
   if (-not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
-    Write-Output "msiexec log file was not found: $LogPath"
+    Write-Step "msiexec log file was not found: $LogPath"
     return
   }
 
-  Write-Output "----- Begin msiexec log: $LogPath -----"
+  Write-Step "----- Begin msiexec log: $LogPath -----"
   Get-Content -LiteralPath $LogPath
-  Write-Output "----- End msiexec log: $LogPath -----"
+  Write-Step "----- End msiexec log: $LogPath -----"
 }
 
 function Invoke-MsiExec {
@@ -205,7 +220,7 @@ function Invoke-MsiExec {
   $logPath = Join-Path $script:LogRoot "${OperationName}.log"
   $fullArguments = "$Arguments /L*v `"$logPath`""
 
-  Write-Output "Running: msiexec.exe $fullArguments"
+  Write-Step "Running: msiexec.exe $fullArguments"
   $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList $fullArguments -NoNewWindow -Wait -PassThru
   if ($AllowedExitCodes -notcontains $process.ExitCode) {
     Write-MsiLogOnFailure -LogPath $logPath
@@ -235,7 +250,7 @@ function Test-InstallExecutionSupported {
   )
 
   if ($TargetGoArch -ne 'amd64') {
-    Write-Information "Skipping install flow tests for $TargetGoArch MSI on this runner" -InformationAction Continue
+    Write-Step "Skipping install flow tests for $TargetGoArch MSI on this runner"
     return $false
   }
 
@@ -249,7 +264,7 @@ function Test-UserScope {
     (Join-Path $env:LOCALAPPDATA 'qrrun')
   )
 
-  Write-Output 'Running user-scope install, repair, reinstall, and uninstall checks'
+  Write-Step 'Running user-scope install, repair, reinstall, and uninstall checks'
   Invoke-BestEffortUninstall -ScopeArguments $scopeArgs -OperationName 'cleanup-user-before'
 
   Invoke-MsiExec -OperationName 'install-user' -Arguments "/i `"$script:ResolvedMsiPath`" /qn /norestart $scopeArgs" | Out-Null
@@ -283,7 +298,7 @@ function Test-MachineScope {
     (Join-Path ${env:ProgramFiles(x86)} 'qrrun')
   )
 
-  Write-Output 'Running machine-scope install, repair, reinstall, and uninstall checks'
+  Write-Step 'Running machine-scope install, repair, reinstall, and uninstall checks'
   Invoke-BestEffortUninstall -ScopeArguments $scopeArgs -OperationName 'cleanup-machine-before'
 
   Invoke-MsiExec -OperationName 'install-machine' -Arguments "/i `"$script:ResolvedMsiPath`" /qn /norestart $scopeArgs" | Out-Null
@@ -310,11 +325,11 @@ function Test-MachineScope {
   Assert-PathEntryState -Target Machine -ExpectedEntry $installDir -ShouldExist $false
 }
 
-$script:ResolvedMsiPath = (Resolve-Path -Path $MsiPath).Path
+$script:ResolvedMsiPath = (Resolve-Path -LiteralPath $MsiPath).Path
 $script:LogRoot = Join-Path (Split-Path -Parent $script:ResolvedMsiPath) 'msi-validation-logs'
 New-Item -ItemType Directory -Path $script:LogRoot -Force | Out-Null
 
-Write-Output "Validating MSI metadata: $script:ResolvedMsiPath"
+Write-Step "Validating MSI metadata: $script:ResolvedMsiPath"
 $installer = New-Object -ComObject WindowsInstaller.Installer
 $database = $installer.OpenDatabase($script:ResolvedMsiPath, 0)
 
@@ -340,11 +355,11 @@ if ($normalizedUpgradeCode -ne $expectedUpgradeCode) {
   throw "Unexpected UpgradeCode '$upgradeCode'"
 }
 
-Write-Output "MSI metadata validated (ProductVersion=$productVersion)"
+Write-Step "MSI metadata validated (ProductVersion=$productVersion)"
 
 if (Test-InstallExecutionSupported -TargetGoArch $GoArch) {
   Test-UserScope
   Test-MachineScope
 }
 
-Write-Output "MSI validation completed successfully. Logs: $script:LogRoot"
+Write-Step "MSI validation completed successfully. Logs: $script:LogRoot"
