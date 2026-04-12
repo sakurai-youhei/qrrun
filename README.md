@@ -9,6 +9,30 @@ Tunnel local code. Run via QR.
 
 ![QRrun demo](demo.gif)
 
+```mermaid
+sequenceDiagram
+	autonumber
+	participant User as User
+	participant QRrun as QRrun
+	participant Cloudflare as Cloudflare
+	participant Camera as Camera App
+	participant Pythonista as Pythonista 3
+
+	User->>QRrun: Run qrrun <script|-> [args...]
+	QRrun->>QRrun: Start localhost server and register script endpoint
+	QRrun->>Cloudflare: Start cloudflared for quick tunnel to local server
+	Cloudflare-->>QRrun: Return public trycloudflare URL
+	QRrun-->>User: Render QR code (runtime URL)
+	User->>Camera: Open camera and scan QR code
+	Camera-->>Pythonista: Open pythonista3://?exec=...
+	Pythonista->>Cloudflare: Request script URL with token
+	Cloudflare->>QRrun: Forward HTTPS request to localhost server
+	QRrun-->>Cloudflare: Return script content
+	Cloudflare-->>Pythonista: Return script payload
+	Pythonista->>Pythonista: Execute script with args
+	Pythonista-->>User: Display script output
+```
+
 ## Prerequisites
 
 - `cloudflared` must be installed and available in your PATH.
