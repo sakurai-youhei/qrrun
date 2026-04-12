@@ -33,43 +33,15 @@ For more options and behavior details, run `qrrun --help`.
 
 ## Installation
 
-### Linux / macOS
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash
-```
-
-Install a specific version:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.sh | bash -s -- v0.1.0
-```
-
-### Windows
-
-```cmd
-curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd
-```
-
-Install a specific version:
-
-```cmd
-curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd v0.1.0-beta.1
-```
-
-Install system-wide:
-
-```cmd
-curl -fLO https://raw.githubusercontent.com/sakurai-youhei/qrrun/main/scripts/install.cmd && install.cmd v0.1.0-beta.1 machine
-```
+See [INSTALL.md](INSTALL.md).
 
 ## Development Setup
 
 This project uses Go `1.24.13`.
 
-1. Set up your Go environment with version `1.24.13`.
+1. If gvm is not installed, follow the [gvm official installation guide](https://github.com/moovweb/gvm?tab=readme-ov-file#installing).
 
-2. If you use gvm, follow the [official installation guide](https://github.com/moovweb/gvm?tab=readme-ov-file#installing), then install and activate the required Go version:
+2. Install and activate the required Go version:
 
 ```bash
 gvm install go1.24.13
