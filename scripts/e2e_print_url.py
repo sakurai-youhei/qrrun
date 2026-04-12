@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import secrets
 import select
 import shutil
@@ -6,6 +7,8 @@ import subprocess
 import sys
 import time
 import unittest
+from functools import cached_property
+from textwrap import dedent
 from urllib.parse import unquote
 
 
@@ -22,12 +25,25 @@ def terminate_proc_gracefully(proc: subprocess.Popen) -> None:
 class TestE2EPrintURL(unittest.TestCase):
     def setUp(self) -> None:
         self.expected = secrets.token_hex(12)
-        self.script = f"print('{self.expected}')\n"
+        self.script = f"print('{self.expected}', end='')\n"
+
+    @cached_property
+    def qrrun_bin(self) -> str:
+        for candidate in ("./qrrun", "./qrrun.exe"):
+            if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                return candidate
+        return ""
 
     def test_require_cloudflared(self) -> None:
         self.assertIsNotNone(
             shutil.which("cloudflared"),
             "cloudflared is required for test-e2e",
+        )
+
+    def test_require_qrrun(self) -> None:
+        self.assertTrue(
+            self.qrrun_bin,
+            "qrrun executable is required for test-e2e",
         )
 
     def test_require_python3(self) -> None:
@@ -39,13 +55,13 @@ class TestE2EPrintURL(unittest.TestCase):
         self.assertRegex(
             version,
             r"^Python 3(\.|\s|$)",
-            f"python3 is required for test-e2e: got '{version}'",
+            f"python3 is required for test-e2e: got {version!r}",
         )
 
     def test_validate_url_roundtrip(self) -> None:
-        proc = subprocess.Popen(
+        qrrun = subprocess.Popen(
             [
-                "./qrrun",
+                self.qrrun_bin,
                 "--transport",
                 "cloudflared",
                 "--runtime",
@@ -58,21 +74,21 @@ class TestE2EPrintURL(unittest.TestCase):
             stderr=subprocess.DEVNULL,
             text=True,
         )
-        self.addCleanup(terminate_proc_gracefully, proc)
+        self.addCleanup(terminate_proc_gracefully, qrrun)
 
-        assert proc.stdin is not None
-        assert proc.stdout is not None
+        assert qrrun.stdin is not None
+        assert qrrun.stdout is not None
 
-        self.addCleanup(proc.stdin.close)
-        self.addCleanup(proc.stdout.close)
+        self.addCleanup(qrrun.stdin.close)
+        self.addCleanup(qrrun.stdout.close)
 
-        proc.stdin.write(self.script)
-        proc.stdin.close()
-        ready, _, _ = select.select([proc.stdout], [], [], 30.0)
+        qrrun.stdin.write(self.script)
+        qrrun.stdin.close()
+        ready, _, _ = select.select([qrrun.stdout], [], [], 30.0)
         if not ready:
             self.fail("timed out waiting for qrrun URL output")
 
-        url_line = proc.stdout.readline().strip()
+        url_line = qrrun.stdout.readline().strip()
         if not url_line:
             self.fail("qrrun exited without producing URL")
 
@@ -86,16 +102,36 @@ class TestE2EPrintURL(unittest.TestCase):
 
         time.sleep(5)
 
-        actual = subprocess.check_output(
-            ["python3", "-"],
-            input=code,
-            text=True,
-        ).strip()
+        python = subprocess.run(
+            [sys.executable, "-"],
+            input=dedent(
+                """
+                import builtins
+                import sys
 
+                def exec(source, *args, **kwargs):
+                    print(source, file=sys.stderr, end="")
+                    return builtins.exec(source, *args, **kwargs)
+                """
+            )
+            + code,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+        actual = python.stdout
         self.assertEqual(
             actual,
             self.expected,
-            f"e2e mismatch: expected '{self.expected}', got '{actual}'",
+            f"output mismatch: expected {self.expected!r}, got {actual!r}",
+        )
+
+        transferred = python.stderr
+        self.assertEqual(
+            transferred,
+            self.script,
+            f"script mismatch: expected {self.script!r}, got {transferred!r}",
         )
 
 
