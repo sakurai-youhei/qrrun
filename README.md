@@ -83,7 +83,7 @@ gvm use go1.24.13 --default
 make checks
 ```
 
-4. Install pre-commit hooks (recommended):
+4. Install pre-commit hooks (highly recommended):
 
 ```bash
 pre-commit install
