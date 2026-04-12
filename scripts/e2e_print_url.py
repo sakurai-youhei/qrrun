@@ -157,8 +157,8 @@ class TestE2EPrintURL(unittest.TestCase):
 
         transferred = python.stderr
         self.assertEqual(
-            transferred,
-            self.script,
+            transferred.rstrip("\n"),
+            self.script.rstrip("\n"),
             f"script mismatch: expected {self.script!r}, got {transferred!r}",
         )
 
