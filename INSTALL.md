@@ -1,5 +1,7 @@
 # Installation
 
+If installation fails, please open an [issue](https://github.com/sakurai-youhei/qrrun/issues/new/choose) and paste the full error message.
+
 ## Linux
 
 Install from package repositories (recommended).
