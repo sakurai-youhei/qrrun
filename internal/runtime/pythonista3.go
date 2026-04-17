@@ -20,7 +20,7 @@ func (p *Pythonista) QRCodeURL(publicURL string, _ string, scriptArgv []string) 
 	if p.Python2 {
 		code = pythonista2ExecCode(publicURL, argvLiteral)
 	}
-	encoded := url.QueryEscape(code)
+	encoded := strings.ReplaceAll(url.QueryEscape(code), "+", "%20")
 	return fmt.Sprintf("%s://?exec=%s", p.Scheme, encoded)
 }
 
