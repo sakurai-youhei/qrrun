@@ -92,7 +92,7 @@ Supported QR error correction levels:
 	` + app.SupportedQRErrorLevelsText() + `
 
 Supported runtimes:
-	pythonista, pythonista2, pythonista3
+	ashell, pythonista, pythonista2, pythonista3
 {{end}}`)
 
 	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,

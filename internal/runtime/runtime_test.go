@@ -9,7 +9,7 @@ import (
 )
 
 func TestNew_KnownRuntime(t *testing.T) {
-	known := []string{"pythonista", "pythonista2", "pythonista3"}
+	known := []string{"ashell", "pythonista", "pythonista2", "pythonista3"}
 	for _, name := range known {
 		rt, err := runtime.New(name)
 		if err != nil {
@@ -18,6 +18,22 @@ func TestNew_KnownRuntime(t *testing.T) {
 		if rt == nil {
 			t.Fatalf("expected non-nil Runtime for %q", name)
 		}
+	}
+}
+
+func TestAshell_QRCodeURL(t *testing.T) {
+	rt, err := runtime.New("ashell")
+	if err != nil {
+		t.Fatalf("unexpected error for ashell: %v", err)
+	}
+
+	got := rt.QRCodeURL("https://example.com/ignored.py", "ignored-token", []string{"ls", "-la"})
+	want := "ashell:ls%20-la"
+	if got != want {
+		t.Fatalf("unexpected ashell URL: got %q, want %q", got, want)
+	}
+	if strings.Contains(got, "//") {
+		t.Fatalf("ashell URL must not include //: %q", got)
 	}
 }
 

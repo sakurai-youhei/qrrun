@@ -58,9 +58,10 @@ qrrun [flags] <script|-> [args...]
 5. Mobile runtime fetches script through the tunnel and executes it.
 
 ## Runtime and QR Notes
-- Supported runtimes: pythonista, pythonista2, pythonista3
+- Supported runtimes: ashell, pythonista, pythonista2, pythonista3
 - Supported QR error correction levels: L, M, Q, H
 - Default runtime is pythonista3.
+- ashell runtime URLs use `ashell:` (without `//`), e.g. `ashell:ls%20-la`.
 
 ## Operational Tips
 - Use --print-url when validating URL generation in automation or tests.
