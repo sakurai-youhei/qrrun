@@ -106,11 +106,14 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		if !strings.Contains(rawExec, "%") {
 			t.Errorf("expected encoded exec query for %q, got %q", tc.name, rawExec)
 		}
-		if strings.Contains(rawExec, "+") {
-			t.Errorf("expected spaces to remain literal spaces (no '+') for %q, got %q", tc.name, rawExec)
+		if strings.Contains(rawExec, " ") {
+			t.Errorf("expected raw exec query to avoid literal spaces for %q, got %q", tc.name, rawExec)
 		}
-		if !strings.Contains(rawExec, " ") {
-			t.Errorf("expected raw exec query to contain a literal space for %q, got %q", tc.name, rawExec)
+		if strings.Contains(rawExec, "+") {
+			t.Errorf("expected spaces to be encoded as %%20 (no '+') for %q, got %q", tc.name, rawExec)
+		}
+		if !strings.Contains(rawExec, "%20") {
+			t.Errorf("expected raw exec query to encode spaces as %%20 for %q, got %q", tc.name, rawExec)
 		}
 	}
 }
