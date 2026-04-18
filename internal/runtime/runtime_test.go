@@ -9,7 +9,7 @@ import (
 )
 
 func TestNew_KnownRuntime(t *testing.T) {
-	known := []string{"pythonista", "pythonista2", "pythonista3"}
+	known := []string{"ashell", "pythonista", "pythonista2", "pythonista3"}
 	for _, name := range known {
 		rt, err := runtime.New(name)
 		if err != nil {
@@ -18,6 +18,30 @@ func TestNew_KnownRuntime(t *testing.T) {
 		if rt == nil {
 			t.Fatalf("expected non-nil Runtime for %q", name)
 		}
+	}
+}
+
+func TestAshell_QRCodeURL(t *testing.T) {
+	rt, err := runtime.New("ashell")
+	if err != nil {
+		t.Fatalf("unexpected error for ashell: %v", err)
+	}
+
+	got := rt.QRCodeURL("https://example.com/run.sh?t=test-token", "ignored-token", []string{"-", "arg1", "arg2"})
+	if !strings.HasPrefix(got, "ashell:") {
+		t.Fatalf("expected ashell scheme, got %q", got)
+	}
+	if strings.HasPrefix(got, "ashell://") {
+		t.Fatalf("ashell URL must use ashell: (without //), got %q", got)
+	}
+
+	wantDecoded := "curl -sSL 'https://example.com/run.sh?t=test-token'|sh -s -- arg1 arg2"
+	payload := strings.TrimPrefix(got, "ashell:")
+	if payload != wantDecoded {
+		t.Fatalf("unexpected ashell payload: got %q, want %q", payload, wantDecoded)
+	}
+	if strings.Contains(payload, " - arg1") {
+		t.Fatalf("script path placeholder must not be forwarded as shell arg: %q", payload)
 	}
 }
 
