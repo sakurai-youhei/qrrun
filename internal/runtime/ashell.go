@@ -10,15 +10,11 @@ type AShell struct{}
 // QRCodeURL converts script argv to an a-Shell deep-link URL.
 // a-Shell uses the "ashell:" prefix (without "//").
 func (a *AShell) QRCodeURL(publicURL string, _ string, scriptArgv []string) string {
-	scriptArgs := scriptArgv
-	if len(scriptArgv) > 0 {
-		scriptArgs = scriptArgv[1:]
-	}
-
 	cmd := "curl -sSL " + shellSingleQuote(publicURL) + "|sh -s --"
-	if len(scriptArgs) > 0 {
-		escapedArgs := make([]string, 0, len(scriptArgs))
-		for _, arg := range scriptArgs {
+	if len(scriptArgv) > 1 {
+		// scriptArgv[0] is the local script path (or "-") and should not be passed to sh.
+		escapedArgs := make([]string, 0, len(scriptArgv)-1)
+		for _, arg := range scriptArgv[1:] {
 			escapedArgs = append(escapedArgs, shellEscapeWord(arg))
 		}
 		cmd += " " + strings.Join(escapedArgs, " ")
