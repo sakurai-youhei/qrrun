@@ -9,7 +9,7 @@ import (
 )
 
 func TestNew_KnownRuntime(t *testing.T) {
-	known := []string{"ashell", "pythonista", "pythonista2", "pythonista3"}
+	known := []string{"ashell", "pythonista2", "pythonista3"}
 	for _, name := range known {
 		rt, err := runtime.New(name)
 		if err != nil {
@@ -46,9 +46,12 @@ func TestAshell_QRCodeURL(t *testing.T) {
 }
 
 func TestNew_UnknownRuntime(t *testing.T) {
-	_, err := runtime.New("unknown-runtime")
-	if err == nil {
-		t.Fatal("expected error for unknown runtime, got nil")
+	tests := []string{"unknown-runtime", "pythonista"}
+	for _, name := range tests {
+		_, err := runtime.New(name)
+		if err == nil {
+			t.Fatalf("expected error for unknown runtime %q, got nil", name)
+		}
 	}
 }
 
@@ -58,7 +61,6 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 		scheme    string
 		isPython2 bool
 	}{
-		{name: "pythonista", scheme: "pythonista", isPython2: false},
 		{name: "pythonista2", scheme: "pythonista2", isPython2: true},
 		{name: "pythonista3", scheme: "pythonista3", isPython2: false},
 	}
