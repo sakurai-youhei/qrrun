@@ -27,7 +27,7 @@ qrrun hello.py arg1 arg2
 Run from stdin:
 
 ```bash
-echo "print('hello')" | qrrun - arg1 arg2
+echo 'print("Hello, QRrun!")' | qrrun - arg1 arg2
 ```
 
 Command format:
@@ -58,7 +58,7 @@ qrrun [flags] <script|-> [args...]
 5. Mobile runtime fetches script through the tunnel and executes it.
 
 ## Runtime and QR Notes
-- Supported runtimes: ashell, pythonista, pythonista2, pythonista3
+- Supported runtimes: ashell, pythonista2, pythonista3
 - Supported QR error correction levels: L, M, Q, H
 - Default runtime is pythonista3, which supports arbitrary Python 3 script.
 - ashell runtime supports arbitrary sh script.

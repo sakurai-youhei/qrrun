@@ -88,11 +88,10 @@ Examples:
 {{if .HasAvailableFlags}}Flags:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
 
-Supported QR error correction levels:
-	` + app.SupportedQRErrorLevelsText() + `
-
 Supported runtimes:
-	ashell, pythonista, pythonista2, pythonista3
+	ashell        Shell (sh) script
+	pythonista2   Python 2 script
+	pythonista3   Python 3 script
 {{end}}`)
 
 	cmd.Flags().BoolVar(&keepServing, "keep-serving", false,
@@ -102,7 +101,7 @@ Supported runtimes:
 	cmd.Flags().StringVar(&runtimeName, "runtime", "pythonista3",
 		`target runtime`)
 	cmd.Flags().StringVar(&qrLevel, "qr-level", app.DefaultQRErrorLevel,
-		`QR error correction level`)
+		`error correction level L/M/Q/H`)
 	cmd.Flags().StringVar(&transportName, "transport", "cloudflared",
 		`tunnel transport`)
 	cmd.Flags().StringVar(&transportOpts, "transport-opts", "",
