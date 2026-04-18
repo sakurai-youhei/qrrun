@@ -25,7 +25,7 @@ qrrun hello.py arg1 arg2
 Run from stdin (`-`):
 
 ```bash
-echo "print('Hello, QRrun!')" | qrrun - arg1 arg2
+echo 'print("Hello, QRrun!")' | qrrun - arg1 arg2
 ```
 
 By default, QRrun generates a QR code for opening and running your script in [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097); use `--runtime` to override this behavior.
