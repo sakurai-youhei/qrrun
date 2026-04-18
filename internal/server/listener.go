@@ -1,5 +1,3 @@
-//go:build !windows
-
 package server
 
 import (
@@ -14,7 +12,6 @@ func newOriginListener() (net.Listener, string, string, func(), error) {
 	}
 
 	base := "https://" + ln.Addr().String()
-
 	cleanup := func() {
 		_ = ln.Close()
 	}

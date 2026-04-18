@@ -4,7 +4,6 @@ package app
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"io"
 	"net/url"
@@ -16,6 +15,7 @@ import (
 
 	"rsc.io/qr"
 
+	"github.com/sakurai-youhei/qrrun/internal/randomid"
 	"github.com/sakurai-youhei/qrrun/internal/runtime"
 	"github.com/sakurai-youhei/qrrun/internal/server"
 	"github.com/sakurai-youhei/qrrun/internal/transport"
@@ -40,8 +40,6 @@ type Options struct {
 }
 
 const DefaultExitQuietPeriod = 500 * time.Millisecond
-
-const alphaNumChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 const DefaultQRErrorLevel = "M"
 
@@ -271,31 +269,7 @@ func Run(opts Options) error {
 }
 
 func generateBearerToken() (string, error) {
-	b := make([]byte, 8)
-	for i := range b {
-		idx, err := randomAlphaNumIndex(len(alphaNumChars))
-		if err != nil {
-			return "", err
-		}
-		b[i] = alphaNumChars[idx]
-	}
-	return string(b), nil
-}
-
-func randomAlphaNumIndex(max int) (int, error) {
-	if max <= 0 || max > 256 {
-		return 0, fmt.Errorf("invalid max: %d", max)
-	}
-	limit := byte(256 - (256 % max))
-	for {
-		var one [1]byte
-		if _, err := rand.Read(one[:]); err != nil {
-			return 0, err
-		}
-		if one[0] < limit {
-			return int(one[0]) % max, nil
-		}
-	}
+	return randomid.AlphaNum(8)
 }
 
 func withQueryToken(rawURL, token string) string {
