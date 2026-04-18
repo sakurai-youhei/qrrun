@@ -13,6 +13,7 @@ Tunnel local code. Run via QR.
 
 - `cloudflared` must be installed and available in your PATH.
 - QRrun uses Cloudflare Quick Tunnels (`trycloudflare.com`). See [Cloudflare Quick Tunnel documentation](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/) for details.
+- Install [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097) and/or [a-Shell](https://apps.apple.com/app/a-shell/id1473805438) on your smartphone in advance.
 
 ## Usage
 
@@ -29,8 +30,43 @@ echo 'print("Hello, QRrun!")' | qrrun - arg1 arg2
 ```
 
 By default, QRrun generates a QR code for opening and running your Python 3 script in [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097); use `--runtime` to override this behavior.
-Supported runtimes: `ashell`, `pythonista2`, `pythonista3`.
-For more options and behavior details, run `qrrun --help`.
+For more options and behavior details, run `qrrun --help`:
+
+```text
+QRrun serves a local script through a secure tunnel and prints a QR code.
+
+scan the QR code to open the script in the selected runtime.
+
+Prerequisites:
+	cloudflared must be installed and available on PATH
+	QRrun uses Cloudflare Quick Tunnels (trycloudflare.com)
+
+Examples:
+	qrrun hello.py arg1 arg2
+	echo 'print("Hello, QRrun!")' | qrrun - arg1 arg2
+
+Usage:
+  qrrun [flags] <script|-> [args...]
+
+Flags:
+      --debug                   show debug logs
+  -h, --help                    help for qrrun
+      --keep-serving            keep serving requests until interrupted
+      --print-url               print only the runtime URL
+      --qr-level string         error correction level L/M/Q/H (default "M")
+      --quiet-period duration   quiet period before exit (default 500ms)
+      --runtime string          target runtime (default "pythonista3")
+      --transport string        tunnel transport (default "cloudflared")
+      --transport-opts string   extra args for the transport command
+      --transport-stderr        show transport stderr on console
+      --transport-stdout        show transport stdout on console
+  -v, --version                 version for qrrun
+
+Supported runtimes:
+	ashell        Shell (sh) script
+	pythonista2   Python 2 script
+	pythonista3   Python 3 script
+```
 
 ## Installation
 
