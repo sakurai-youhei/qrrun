@@ -30,7 +30,7 @@ echo "print('Hello, QRrun!')" | qrrun - arg1 arg2
 
 By default, QRrun generates a QR code for opening and running your script in [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097); use `--runtime` to override this behavior.
 Supported runtimes: `ashell`, `pythonista`, `pythonista2`, `pythonista3`.
-For `ashell`, URLs are encoded with the `ashell:` prefix (without `//`), for example `ashell:ls%20-la`.
+For `ashell`, QRrun embeds a shell command in an `ashell:` URL (without `//`) that executes the served script via `curl -sSL '<URL>'|sh -s -- <args...>`.
 For more options and behavior details, run `qrrun --help`.
 
 ## Installation

@@ -27,13 +27,21 @@ func TestAshell_QRCodeURL(t *testing.T) {
 		t.Fatalf("unexpected error for ashell: %v", err)
 	}
 
-	got := rt.QRCodeURL("https://example.com/ignored.py", "ignored-token", []string{"ls", "-la"})
-	want := "ashell:ls%20-la"
-	if got != want {
-		t.Fatalf("unexpected ashell URL: got %q, want %q", got, want)
+	got := rt.QRCodeURL("https://example.com/run.sh?t=test-token", "ignored-token", []string{"-", "arg1", "arg2"})
+	if !strings.HasPrefix(got, "ashell:") {
+		t.Fatalf("expected ashell scheme, got %q", got)
 	}
-	if strings.Contains(got, "//") {
-		t.Fatalf("ashell URL must not include //: %q", got)
+	if strings.HasPrefix(got, "ashell://") {
+		t.Fatalf("ashell URL must use ashell: (without //), got %q", got)
+	}
+
+	wantDecoded := "curl -sSL 'https://example.com/run.sh?t=test-token'|sh -s -- arg1 arg2"
+	payload := strings.TrimPrefix(got, "ashell:")
+	if payload != wantDecoded {
+		t.Fatalf("unexpected ashell payload: got %q, want %q", payload, wantDecoded)
+	}
+	if strings.Contains(payload, " - arg1") {
+		t.Fatalf("script path placeholder must not be forwarded as shell arg: %q", payload)
 	}
 }
 
