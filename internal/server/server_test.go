@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -26,20 +25,9 @@ func TestServer_ServesScriptFile(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	client := startServerForTest(t, srv)
 
-	go func() {
-		if err := srv.Serve(ctx); err != nil {
-			// Only log — the test may have already cancelled the context.
-			fmt.Println("server error:", err)
-		}
-	}()
-
-	// Give the server a moment to start.
-	time.Sleep(50 * time.Millisecond)
-
-	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
+	resp, err := doRequest(client, http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -94,14 +82,7 @@ func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		_ = srv.Serve(ctx)
-	}()
-
-	time.Sleep(50 * time.Millisecond)
+	client := startServerForTest(t, srv)
 
 	select {
 	case <-srv.FirstRequestServed():
@@ -109,7 +90,7 @@ func TestServer_FirstRequestServed_IsSignaled(t *testing.T) {
 	default:
 	}
 
-	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
+	resp, err := doRequest(client, http.MethodGet, srv.ScriptURL(), testBearerToken, nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -128,21 +109,14 @@ func TestServer_FirstRequestServed_HeadDoesNotSignal(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		_ = srv.Serve(ctx)
-	}()
-
-	time.Sleep(50 * time.Millisecond)
+	client := startServerForTest(t, srv)
 
 	req, err := http.NewRequest(http.MethodHead, srv.ScriptURL(), nil)
 	if err != nil {
 		t.Fatalf("create HEAD request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	resp, err := serverHTTPClient(srv).Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
 	}
@@ -162,16 +136,9 @@ func TestServer_LogsAllRequests(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	client := startServerForTest(t, srv)
 
-	go func() {
-		_ = srv.Serve(ctx)
-	}()
-
-	time.Sleep(50 * time.Millisecond)
-
-	if _, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), testBearerToken, nil); err != nil {
+	if _, err := doRequest(client, http.MethodGet, srv.ScriptURL(), testBearerToken, nil); err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
 
@@ -180,7 +147,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 		t.Fatalf("create HEAD request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	resp, err := serverHTTPClient(srv).Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("HEAD %s: %v", srv.ScriptURL(), err)
 	}
@@ -191,7 +158,7 @@ func TestServer_LogsAllRequests(t *testing.T) {
 		t.Fatalf("create POST request: %v", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+testBearerToken)
-	resp, err = serverHTTPClient(srv).Do(req)
+	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatalf("POST %s: %v", srv.ScriptURL(), err)
 	}
@@ -215,17 +182,10 @@ func TestServer_RejectsUnauthorizedRequest(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		_ = srv.Serve(ctx)
-	}()
-
-	time.Sleep(50 * time.Millisecond)
+	client := startServerForTest(t, srv)
 
 	start := time.Now()
-	resp, err := doRequest(serverHTTPClient(srv), http.MethodGet, srv.ScriptURL(), "wrong-token", nil)
+	resp, err := doRequest(client, http.MethodGet, srv.ScriptURL(), "wrong-token", nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", srv.ScriptURL(), err)
 	}
@@ -251,17 +211,10 @@ func TestServer_AcceptsQueryToken(t *testing.T) {
 		t.Fatalf("server.New: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go func() {
-		_ = srv.Serve(ctx)
-	}()
-
-	time.Sleep(50 * time.Millisecond)
+	client := startServerForTest(t, srv)
 
 	queryURL := srv.ScriptURL() + "?t=" + url.QueryEscape(testBearerToken)
-	resp, err := doRequestRawURL(serverHTTPClient(srv), http.MethodGet, queryURL, "", nil)
+	resp, err := doRequestRawURL(client, http.MethodGet, queryURL, "", nil)
 	if err != nil {
 		t.Fatalf("GET %s: %v", queryURL, err)
 	}
@@ -287,10 +240,48 @@ func doRequestRawURL(client *http.Client, method, rawURL, bearerToken string, bo
 	return client.Do(req)
 }
 
-func serverHTTPClient(srv *server.Server) *http.Client {
+func startServerForTest(t *testing.T, srv *server.Server) *http.Client {
+	t.Helper()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() {
+		_ = srv.Serve(ctx)
+	}()
+
+	client := serverHTTPClient(t, srv)
+	waitForServerReady(t, client, srv.URL())
+	return client
+}
+
+func waitForServerReady(t *testing.T, client *http.Client, baseURL string) {
+	t.Helper()
+
+	deadline := time.Now().Add(2 * time.Second)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		resp, err := doRequestRawURL(client, http.MethodGet, baseURL+"/", "", nil)
+		if err == nil {
+			_ = resp.Body.Close()
+			return
+		}
+		lastErr = err
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if lastErr == nil {
+		t.Fatal("server did not become ready in time")
+	}
+	t.Fatalf("server did not become ready in time: %v", lastErr)
+}
+
+func serverHTTPClient(t *testing.T, srv *server.Server) *http.Client {
+	t.Helper()
+
 	pool := x509.NewCertPool()
 	if ok := pool.AppendCertsFromPEM(srv.OriginCAPEM()); !ok {
-		panic("failed to append origin CA cert")
+		t.Fatal("failed to append origin CA cert")
 	}
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{RootCAs: pool},

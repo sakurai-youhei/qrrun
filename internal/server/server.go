@@ -20,6 +20,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/sakurai-youhei/qrrun/internal/randomid"
 )
 
 // Server is an in-memory single-script HTTP server.
@@ -40,15 +42,20 @@ type Server struct {
 	firstReq    sync.Once
 }
 
-const alphaNumChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-
 // New creates a Server that serves scriptBytes on a random free port.
-// The script is exposed at /<uuid-without-extension>.
+// The script is exposed at /<8-char-random-id>.
 func New(scriptBytes []byte, contentType string, bearerToken string, requestLog io.Writer) (*Server, error) {
 	ln, baseURL, originURL, cleanup, err := newOriginListener()
 	if err != nil {
 		return nil, err
 	}
+	cleanupOnError := true
+	defer func() {
+		if cleanupOnError {
+			cleanup()
+		}
+	}()
+
 	if strings.TrimSpace(bearerToken) == "" {
 		return nil, fmt.Errorf("server: bearer token is required")
 	}
@@ -58,7 +65,6 @@ func New(scriptBytes []byte, contentType string, bearerToken string, requestLog 
 
 	tlsArtifacts, err := newOriginTLSConfig()
 	if err != nil {
-		cleanup()
 		return nil, err
 	}
 
@@ -66,6 +72,8 @@ func New(scriptBytes []byte, contentType string, bearerToken string, requestLog 
 	if err != nil {
 		return nil, fmt.Errorf("server: script id: %w", err)
 	}
+
+	cleanupOnError = false
 
 	return &Server{
 		scriptID:    scriptID,
@@ -174,31 +182,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 func newScriptID() (string, error) {
-	b := make([]byte, 8)
-	for i := range b {
-		idx, err := randomAlphaNumIndex(len(alphaNumChars))
-		if err != nil {
-			return "", err
-		}
-		b[i] = alphaNumChars[idx]
-	}
-	return string(b), nil
-}
-
-func randomAlphaNumIndex(max int) (int, error) {
-	if max <= 0 || max > 256 {
-		return 0, fmt.Errorf("invalid max: %d", max)
-	}
-	limit := byte(256 - (256 % max))
-	for {
-		var one [1]byte
-		if _, err := rand.Read(one[:]); err != nil {
-			return 0, err
-		}
-		if one[0] < limit {
-			return int(one[0]) % max, nil
-		}
-	}
+	return randomid.AlphaNum(8)
 }
 
 type originTLSArtifacts struct {
