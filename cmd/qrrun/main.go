@@ -56,7 +56,7 @@ Prerequisites:
 
 Examples:
 	qrrun hello.py arg1 arg2
-	echo "print('hello')" | qrrun - arg1 arg2`,
+	echo 'print("Hello, QRrun!")' | qrrun - arg1 arg2`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			keepServingMode := keepServing
