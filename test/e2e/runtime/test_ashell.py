@@ -26,9 +26,16 @@ class TestAShell(E2EPrintURLBase):
         return dedent(
             """\
             curl() {
-                RUNNER=`command curl "$@"`
-                echo "$RUNNER" >&2
-                echo "$RUNNER"
+                _runner_file="$(mktemp)"
+                command curl "$@" >"$_runner_file"
+                _status=$?
+                if [ "$_status" -ne 0 ]; then
+                    rm -f "$_runner_file"
+                    return "$_status"
+                fi
+                cat "$_runner_file" >&2
+                cat "$_runner_file"
+                rm -f "$_runner_file"
             }
             """
         ).encode("utf-8")
