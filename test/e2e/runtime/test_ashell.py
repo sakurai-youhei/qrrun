@@ -23,7 +23,11 @@ class TestAShell(E2EPrintURLBase):
         return dedent(
             """\
             curl() {
-                command curl "$@" | tee >(cat 1>&2)
+                if [ -f "/dev/stderr" ]; then
+                    command curl "$@" | tee /dev/stderr
+                else
+                    command curl "$@" | tee >(cat 1>&2)
+                fi
             }
             """
         ).encode("utf-8")
