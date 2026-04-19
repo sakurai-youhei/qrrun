@@ -14,7 +14,13 @@ from uuid import uuid4
 
 
 class QRrunPrintURL(subprocess.Popen):
-    def __init__(self, transport: str, runtime: str, script: bytes) -> None:
+    def __init__(
+        self,
+        transport: str,
+        runtime: str,
+        script: bytes,
+        script_arguments: Sequence[str],
+    ) -> None:
         super().__init__(
             [
                 self.__qrrun(),
@@ -26,6 +32,7 @@ class QRrunPrintURL(subprocess.Popen):
                 runtime,
                 "--print-url",
                 "-",
+                *script_arguments,
             ],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -100,6 +107,17 @@ class E2EPrintURLBase(TestCase, ABC):
     def script_output(self) -> bytes:
         return f"こんにちは, QRrun! {uuid4()} {printable}".encode("utf-8")
 
+    @cached_property
+    def script_arguments(self) -> list[str]:
+        return ["alpha", "two words", "", "quote'arg", "semi;colon"]
+
+    @cached_property
+    def expected_output(self) -> bytes:
+        out = bytearray(self.script_output)
+        for argument in self.script_arguments:
+            out.extend(f"\nARG:{argument}".encode("utf-8"))
+        return bytes(out)
+
     def test_validate_url_roundtrip(self) -> None:
         for command in [self.mock_runtime(), "cloudflared"]:
             if shutil.which(command) is None:
@@ -117,6 +135,7 @@ class E2EPrintURLBase(TestCase, ABC):
             self.transport(),
             self.runtime(),
             self.script(),
+            self.script_arguments,
         ) as qrrun:
             try:
                 url_line = qrrun.stdout_readline(timeout=10)
@@ -159,8 +178,8 @@ class E2EPrintURLBase(TestCase, ABC):
             f"expected {self.script()!r}, got {proc.stderr!r}",
         )
         self.assertEqual(
-            self.script_output,
+            self.expected_output,
             proc.stdout,
             "output mismatch: "
-            f"expected {self.script_output!r}, got {proc.stdout!r}",
+            f"expected {self.expected_output!r}, got {proc.stdout!r}",
         )

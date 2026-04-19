@@ -16,6 +16,9 @@ class TestAShell(E2EPrintURLBase):
             f"""\
             #!/bin/sh
             echo {b64encode(self.script_output).decode("utf-8")} | base64 -d
+            for arg in "$@"; do
+                printf '\\nARG:%s' "$arg"
+            done
             """
         ).encode("utf-8")
 
