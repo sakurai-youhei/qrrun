@@ -16,6 +16,9 @@ class TestPythonista2(E2EPrintURLBase):
             #!/usr/bin/env python2
             import sys
             sys.stdout.write({self.script_output!r})
+            for arg in sys.argv[1:]:
+                sys.stdout.write("\\nARG:")
+                sys.stdout.write(arg)
         """).encode("utf-8")
 
     def runner_preamble(self) -> bytes:

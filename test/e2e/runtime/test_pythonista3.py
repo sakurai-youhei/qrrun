@@ -17,6 +17,9 @@ class TestPythonista3(E2EPrintURLBase):
             #!/usr/bin/env python3
             import sys
             sys.stdout.buffer.write({self.script_output!r})
+            for arg in sys.argv[1:]:
+                sys.stdout.buffer.write(b"\\nARG:")
+                sys.stdout.buffer.write(arg.encode("utf-8"))
             """
         ).encode("utf-8")
 
