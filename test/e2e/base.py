@@ -97,8 +97,9 @@ class E2EPrintURLBase(TestCase, ABC):
         return f"こんにちは, QRrun! {uuid4()} {printable}".encode("utf-8")
 
     def test_validate_url_roundtrip(self) -> None:
-        if shutil.which(self.mock_runtime()) is None:
-            self.skipTest(f"{self.mock_runtime()!r} is not available")
+        for command in [self.mock_runtime(), "cloudflared"]:
+            if shutil.which(command) is None:
+                self.skipTest(f"{command!r} is not available")
 
         with QRrunPrintURL(
             self.transport(),
