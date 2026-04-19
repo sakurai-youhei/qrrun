@@ -23,7 +23,9 @@ class TestAShell(E2EPrintURLBase):
         return dedent(
             """\
             curl() {
-                command curl "$@" | tee >(cat 1>&2)
+                RUNNER=`command curl "$@"`
+                echo "$RUNNER" >&2
+                echo "$RUNNER"
             }
             """
         ).encode("utf-8")
@@ -34,7 +36,7 @@ class TestAShell(E2EPrintURLBase):
         return command
 
     def mock_runtime(self) -> str:
-        return "bash"
+        return "sh"
 
     def mock_runtime_opts(self) -> list[str]:
         return ["-s"]

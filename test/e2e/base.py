@@ -104,14 +104,6 @@ class E2EPrintURLBase(TestCase, ABC):
         for command in [self.mock_runtime(), "cloudflared"]:
             if shutil.which(command) is None:
                 self.skipTest(f"{command!r} is not available")
-            try:
-                subprocess.run(
-                    [command, "--version"],
-                    capture_output=True,
-                    check=True,
-                )
-            except (subprocess.CalledProcessError, OSError) as e:
-                self.skipTest(f"failed to run {command!r}: {e}")
 
         with QRrunPrintURL(
             self.transport(),
