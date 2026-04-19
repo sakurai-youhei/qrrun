@@ -35,7 +35,7 @@ func TestAshell_QRCodeURL(t *testing.T) {
 		t.Fatalf("ashell URL must use ashell: (without //), got %q", got)
 	}
 
-	wantDecoded := "curl -sSL 'https://example.com/run.sh?t=test-token'|sh -s -- arg1 arg2"
+	wantDecoded := "curl -sSL 'https://example.com/run.sh?t=test-token'|bash -s -- arg1 arg2"
 	payload := strings.TrimPrefix(got, "ashell:")
 	if payload != wantDecoded {
 		t.Fatalf("unexpected ashell payload: got %q, want %q", payload, wantDecoded)

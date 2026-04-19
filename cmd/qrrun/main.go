@@ -89,7 +89,7 @@ Examples:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}
 
 Supported runtimes:
-	ashell        Shell (sh) script
+	ashell        Bash script
 	pythonista2   Python 2 script
 	pythonista3   Python 3 script
 {{end}}`)
