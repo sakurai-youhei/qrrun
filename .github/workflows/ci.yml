@@ -73,11 +73,11 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Setup Python 2
+      - name: Setup Python 2 compatible runtime
         id: setup-python2
         uses: actions/setup-python@v6
         with:
-          python-version: "2.7"
+          python-version: "pypy2.7"
 
       - name: Ensure Python commands
         shell: bash
