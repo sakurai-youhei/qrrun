@@ -61,7 +61,7 @@ qrrun [flags] <script|-> [args...]
 - Supported runtimes: ashell, pythonista2, pythonista3
 - Supported QR error correction levels: L, M, Q, H
 - Default runtime is pythonista3, which supports arbitrary Python 3 script.
-- ashell runtime supports arbitrary sh script.
+- ashell runtime supports arbitrary bash script.
 
 ## Operational Tips
 - Use --print-url when validating URL generation in automation or tests.
