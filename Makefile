@@ -27,7 +27,7 @@ test:
 
 ## test-e2e: run local --print-url end-to-end test via cloudflared
 test-e2e: build
-	python3 -m unittest discover -s test/e2e -p "test_*.py"
+	python3 -m unittest discover -v -s test.e2e -p "test_*.py"
 
 ## lint: run golangci-lint (uses go run fallback when not installed)
 lint:
