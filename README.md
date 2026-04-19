@@ -63,7 +63,7 @@ Flags:
   -v, --version                 version for qrrun
 
 Supported runtimes:
-	ashell        Bash script
+	ashell        Shell (sh) script
 	pythonista2   Python 2 script
 	pythonista3   Python 3 script
 ```
