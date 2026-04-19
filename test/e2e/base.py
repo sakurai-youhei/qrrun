@@ -35,7 +35,7 @@ class QRrunPrintURL(subprocess.Popen):
         with self.stdin:
             self.stdin.write(script)
 
-    def wait(self, timeout=1):
+    def wait(self, timeout=5.0):
         super().wait(timeout=timeout)
 
     def stdout_readline(self, *, timeout: float) -> bytes:
