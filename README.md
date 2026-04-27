@@ -5,7 +5,13 @@
 [![Latest Release](https://img.shields.io/github/v/release/sakurai-youhei/qrrun)](https://github.com/sakurai-youhei/qrrun/releases)
 [![License](https://img.shields.io/github/license/sakurai-youhei/qrrun)](LICENSE)
 
-Tunnel local code. Run via QR.
+Prototype on your machine. Run on your phone in one scan.
+
+**What problem does this solve?** Phones are powerful, connected, and have excellent runtimes (e.g. [Pythonista 3](https://apps.apple.com/app/pythonista-3/id1085978097)), but writing code on-device is awkward compared with your editor, VCS, and stack on a laptop. Getting a script to the phone often means cloud storage, a gist, AirDrop, or other handoffs that slow a quick “does this run?” moment.
+
+A QR can carry a few kilobytes, without a direct network between the devices. A larger script uses that as a bootstrap: the phone pulls the real payload from your computer through a [secure tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/), so the printed image stays a small, scannable token.
+
+**What QRrun is for:** keep authoring where you always do, print a code to run the same script in a supported on-phone runtime, and graduate to a proper distribution when the idea matures. QRrun also defends the path it controls—TLS, unguessable paths and tokens, and E2E tests that verify the script your phone receives is the one you meant to serve.
 
 ![QRrun demo](demo.gif)
 

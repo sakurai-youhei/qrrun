@@ -126,7 +126,7 @@ PackageName: qrrun
 PackageUrl: https://github.com/sakurai-youhei/qrrun
 License: MIT
 LicenseUrl: https://github.com/sakurai-youhei/qrrun/blob/${VERSION}/LICENSE
-ShortDescription: Tunnel local code and run it via QR.
+ShortDescription: Prototype locally, run on your phone via a QR and a quick tunnel
 Description: qrrun tunnels local scripts and lets mobile runtimes execute them by scanning a QR code.
 Moniker: qrrun
 Tags:
