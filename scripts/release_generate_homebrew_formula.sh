@@ -43,7 +43,7 @@ log "Generating Homebrew formula at dist/homebrew/qrrun.rb"
 
 cat >dist/homebrew/qrrun.rb <<EOF
 class Qrrun < Formula
-  desc "Tunnel local code and run it via QR"
+  desc "Prototype locally, run on your phone via a QR and a quick tunnel"
   homepage "https://github.com/${REPO}"
   version "${FORMULA_VERSION}"
 

@@ -42,7 +42,7 @@ Section: utils
 Priority: optional
 Architecture: ${DEB_ARCH}
 Maintainer: qrrun maintainers
-Description: Tunnel local code and run it via QR
+Description: Prototype locally, run on your phone via a QR and a quick tunnel
 EOF
 
 log "Building Debian package: dist/${DEB_BASE}.deb"

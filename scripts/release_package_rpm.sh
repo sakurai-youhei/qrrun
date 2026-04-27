@@ -51,7 +51,7 @@ fpm \
   --iteration "${RPM_RELEASE}" \
   --architecture "${RPM_ARCH}" \
   --license MIT \
-  --description "Tunnel local code and run it via QR." \
+  --description "Prototype locally, run on your phone via a QR and a quick tunnel." \
   --package "dist/qrrun_${PKG_VERSION}_${RPM_ARCH}.rpm" \
   "dist/${BIN}=/usr/bin/qrrun"
 log "RPM package built successfully"
