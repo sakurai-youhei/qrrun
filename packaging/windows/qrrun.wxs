@@ -5,7 +5,7 @@
     Name="qrrun"
     Language="1033"
     Version="$(var.ProductVersion)"
-    Manufacturer="qrrun maintainers"
+    Manufacturer="Youhei Sakurai"
     UpgradeCode="B1A2C8E2-3E4B-4F93-ABF7-D39C45FB0C6D">
     <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of qrrun is already installed." />
@@ -15,6 +15,10 @@
     <Property Id="ApplicationFolderName" Value="qrrun" />
     <Property Id="WixUISupportPerUser" Value="1" />
     <Property Id="WixUISupportPerMachine" Value="1" />
+    <Property Id="ARPCONTACT" Value="Youhei Sakurai" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/sakurai-youhei/qrrun" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/sakurai-youhei/qrrun/issues" />
+    <Property Id="ARPCOMMENTS" Value="qrrun tunnels local scripts and lets mobile runtimes execute them by scanning a QR code." />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="WixPerMachineFolder">

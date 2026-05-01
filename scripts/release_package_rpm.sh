@@ -6,6 +6,12 @@ GOARCH="${GOARCH:?GOARCH is required}"
 BIN="${BIN:?BIN is required}"
 
 SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=./release_package_metadata.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/release_package_metadata.sh"
+
 log() {
   echo "[${SCRIPT_NAME}] $*"
 }
@@ -46,12 +52,15 @@ log "Building RPM package for ${RPM_ARCH} (version ${RPM_VERSION}-${RPM_RELEASE}
 fpm \
   -s dir \
   -t rpm \
-  -n qrrun \
+  -n "${QRRUN_PACKAGE_NAME}" \
   -v "${RPM_VERSION}" \
   --iteration "${RPM_RELEASE}" \
   --architecture "${RPM_ARCH}" \
-  --license MIT \
-  --description "Prototype locally, run on your phone via a QR and a quick tunnel." \
-  --package "dist/qrrun_${PKG_VERSION}_${RPM_ARCH}.rpm" \
-  "dist/${BIN}=/usr/bin/qrrun"
+  --maintainer "${QRRUN_PACKAGE_MAINTAINER}" \
+  --vendor "${QRRUN_PACKAGE_MAINTAINER}" \
+  --license "${QRRUN_PACKAGE_LICENSE}" \
+  --url "${QRRUN_PACKAGE_HOMEPAGE}" \
+  --description "${QRRUN_PACKAGE_DESCRIPTION}" \
+  --package "dist/${QRRUN_PACKAGE_NAME}_${PKG_VERSION}_${RPM_ARCH}.rpm" \
+  "dist/${BIN}=/usr/bin/${QRRUN_PACKAGE_NAME}"
 log "RPM package built successfully"
