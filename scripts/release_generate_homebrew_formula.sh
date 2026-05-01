@@ -5,6 +5,12 @@ VERSION="${VERSION:?VERSION is required}"
 REPO="${REPO:?REPO is required}"
 
 SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=./release_package_metadata.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/release_package_metadata.sh"
+
 log() {
   echo "[${SCRIPT_NAME}] $*"
 }
@@ -21,8 +27,8 @@ require_tool sha256sum
 require_tool awk
 
 FORMULA_VERSION="${VERSION#v}"
-DARWIN_AMD64="qrrun_${VERSION}_darwin_amd64.tar.gz"
-DARWIN_ARM64="qrrun_${VERSION}_darwin_arm64.tar.gz"
+DARWIN_AMD64="${QRRUN_PACKAGE_NAME}_${VERSION}_darwin_amd64.tar.gz"
+DARWIN_ARM64="${QRRUN_PACKAGE_NAME}_${VERSION}_darwin_arm64.tar.gz"
 
 if [[ ! -f "dist/${DARWIN_AMD64}" ]]; then
   log "Missing release asset: dist/${DARWIN_AMD64}"
@@ -43,8 +49,9 @@ log "Generating Homebrew formula at dist/homebrew/qrrun.rb"
 
 cat >dist/homebrew/qrrun.rb <<EOF
 class Qrrun < Formula
-  desc "Prototype locally, run on your phone via a QR and a quick tunnel"
-  homepage "https://github.com/${REPO}"
+  desc "${QRRUN_PACKAGE_TAGLINE}"
+  homepage "${QRRUN_PACKAGE_HOMEPAGE}"
+  license "${QRRUN_PACKAGE_LICENSE}"
   version "${FORMULA_VERSION}"
 
   on_macos do
@@ -61,14 +68,14 @@ class Qrrun < Formula
 
   def install
     if Hardware::CPU.intel?
-      bin.install "qrrun_v#{version}_darwin_amd64" => "qrrun"
+      bin.install "${QRRUN_PACKAGE_NAME}_v#{version}_darwin_amd64" => "${QRRUN_PACKAGE_NAME}"
     else
-      bin.install "qrrun_v#{version}_darwin_arm64" => "qrrun"
+      bin.install "${QRRUN_PACKAGE_NAME}_v#{version}_darwin_arm64" => "${QRRUN_PACKAGE_NAME}"
     end
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/qrrun --version")
+    assert_match version.to_s, shell_output("#{bin}/${QRRUN_PACKAGE_NAME} --version")
   end
 end
 EOF

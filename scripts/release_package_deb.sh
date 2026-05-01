@@ -6,6 +6,12 @@ GOARCH="${GOARCH:?GOARCH is required}"
 BIN="${BIN:?BIN is required}"
 
 SCRIPT_NAME="$(basename "$0")"
+SCRIPT_DIR="$(cd -- "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck source=./release_package_metadata.sh
+# shellcheck disable=SC1091
+source "${SCRIPT_DIR}/release_package_metadata.sh"
+
 log() {
   echo "[${SCRIPT_NAME}] $*"
 }
@@ -28,21 +34,23 @@ fi
 
 DEB_ARCH="${GOARCH}"
 DEB_VERSION="${VERSION#v}"
-DEB_BASE="qrrun_${DEB_VERSION}_${DEB_ARCH}"
+DEB_BASE="${QRRUN_PACKAGE_NAME}_${DEB_VERSION}_${DEB_ARCH}"
 PKG_ROOT="dist/${DEB_BASE}"
 
 log "Preparing Debian package layout: ${PKG_ROOT}"
 mkdir -p "${PKG_ROOT}/DEBIAN" "${PKG_ROOT}/usr/bin"
-install -m 0755 "dist/${BIN}" "${PKG_ROOT}/usr/bin/qrrun"
+install -m 0755 "dist/${BIN}" "${PKG_ROOT}/usr/bin/${QRRUN_PACKAGE_NAME}"
 
 cat >"${PKG_ROOT}/DEBIAN/control" <<EOF
-Package: qrrun
+Package: ${QRRUN_PACKAGE_NAME}
 Version: ${DEB_VERSION}
 Section: utils
 Priority: optional
 Architecture: ${DEB_ARCH}
-Maintainer: qrrun maintainers
-Description: Prototype locally, run on your phone via a QR and a quick tunnel
+Maintainer: ${QRRUN_PACKAGE_MAINTAINER}
+Homepage: ${QRRUN_PACKAGE_HOMEPAGE}
+Description: ${QRRUN_PACKAGE_TAGLINE}
+ ${QRRUN_PACKAGE_DESCRIPTION}
 EOF
 
 log "Building Debian package: dist/${DEB_BASE}.deb"
