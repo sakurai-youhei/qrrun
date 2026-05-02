@@ -56,7 +56,7 @@ class TestPythonista2(E2EPrintURLBase):
     def mock_runtime_opts(self) -> list[str]:
         return [
             "-c",
-            ("import sys;exec compile(sys.stdin.read(), '<stdin>', 'exec')"),
+            "import sys;exec compile(sys.stdin.read(), '<stdin>', 'exec')",
         ]
 
 
