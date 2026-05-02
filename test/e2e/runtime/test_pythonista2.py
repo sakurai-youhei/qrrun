@@ -24,24 +24,17 @@ class TestPythonista2(E2EPrintURLBase):
     def runner_preamble(self) -> bytes:
         return dedent(
             """
+            import __builtin__
             import sys
-            import urllib2
 
-            _qrrun_original_urlopen = urllib2.urlopen
+            def hook_compile(compile):
+                def hooked(source, filename, mode, *args, **kwargs):
+                    if mode == "exec" and isinstance(source, basestring):
+                        sys.stderr.write(source)
+                    return compile(source, filename, mode, *args, **kwargs)
+                return hooked
 
-            class _QRRUNCapturedResponse(object):
-                def __init__(self, body):
-                    self._body = body
-
-                def read(self):
-                    return self._body
-
-            def _qrrun_capture_urlopen(*args, **kwargs):
-                body = _qrrun_original_urlopen(*args, **kwargs).read()
-                sys.stderr.write(body)
-                return _QRRUNCapturedResponse(body)
-
-            urllib2.urlopen = _qrrun_capture_urlopen
+            __builtin__.compile = hook_compile(__builtin__.compile)
             """
         ).encode("utf-8")
 
@@ -51,7 +44,7 @@ class TestPythonista2(E2EPrintURLBase):
         return unquote(code)
 
     def mock_runtime(self) -> str:
-        return "python2"
+        return "pypy2"
 
     def mock_runtime_opts(self) -> list[str]:
         return [

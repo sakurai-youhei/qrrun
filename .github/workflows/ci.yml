@@ -68,31 +68,14 @@ jobs:
           go-version-file: go.mod
 
       - name: Setup Python 3
-        id: setup-python3
         uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
       - name: Setup Python 2 compatible runtime
-        id: setup-python2
         uses: actions/setup-python@v6
         with:
           python-version: "pypy2.7"
-
-      - name: Ensure Python commands
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.local/bin"
-          ln -sf "${{ steps.setup-python2.outputs.python-path }}" \
-            "$HOME/.local/bin/python2"
-          ln -sf "${{ steps.setup-python3.outputs.python-path }}" \
-            "$HOME/.local/bin/python3"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
-          export PATH="$HOME/.local/bin:$PATH"
-          python2 --version
-          python3 --version
 
       - name: Install cloudflared
         shell: bash
