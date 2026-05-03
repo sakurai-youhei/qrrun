@@ -29,7 +29,11 @@ class TestPythonista2(E2EPrintURLBase):
 
             def hook_compile(compile):
                 def hooked(source, filename, mode, *args, **kwargs):
-                    if mode == "exec" and isinstance(source, basestring):
+                    if (
+                        mode == "exec"
+                        and isinstance(source, basestring)
+                        and source.startswith("#!/usr/bin/env python2")
+                    ):
                         sys.stderr.write(source)
                     return compile(source, filename, mode, *args, **kwargs)
                 return hooked
