@@ -37,7 +37,7 @@ func pythonista3ExecCode(publicURL, argvLiteral string) string {
 func pythonista2ExecCode(publicURL, argvLiteral string) string {
 	return fmt.Sprintf(
 		"import sys,urllib2 as u;a=sys.argv[:];sys.argv=%s\n"+
-			"try:exec u.urlopen(%q).read() in {\"__name__\":\"__main__\"}\n"+
+			"try:exec(u.urlopen(%q).read(),{\"__name__\":\"__main__\"})\n"+
 			"finally:sys.argv=a",
 		argvLiteral,
 		publicURL,

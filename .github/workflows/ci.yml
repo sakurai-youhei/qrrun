@@ -67,10 +67,15 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Setup Python
+      - name: Setup Python 3
         uses: actions/setup-python@v6
         with:
           python-version: "3.x"
+
+      - name: Setup Python 2 compatible runtime
+        uses: actions/setup-python@v6
+        with:
+          python-version: "pypy2.7"
 
       - name: Install cloudflared
         shell: bash

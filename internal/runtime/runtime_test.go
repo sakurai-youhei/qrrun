@@ -106,8 +106,8 @@ func TestPythonista_QRCodeURL_ExecScheme(t *testing.T) {
 			if !strings.Contains(execCode, "import sys,urllib2 as u") {
 				t.Errorf("expected urllib2 import in exec code for %q, got %q", tc.name, execCode)
 			}
-			if !strings.Contains(execCode, "exec u.urlopen(") || !strings.Contains(execCode, ").read() in {") {
-				t.Errorf("expected Python2 exec statement in exec code for %q, got %q", tc.name, execCode)
+			if !strings.Contains(execCode, "exec(u.urlopen(") || !strings.Contains(execCode, ").read(),{\"__name__\":\"__main__\"})") {
+				t.Errorf("expected Python2 exec(...) call in exec code for %q, got %q", tc.name, execCode)
 			}
 			if strings.Contains(execCode, ".decode()") {
 				t.Errorf("did not expect decode() in python2 exec code for %q, got %q", tc.name, execCode)
