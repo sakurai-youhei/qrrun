@@ -30,6 +30,25 @@ gh_source() {
   GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh "$@"
 }
 
+write_issue_body() {
+  local output_file="$1"
+  local pr_url="$2"
+
+  cat >"${output_file}" <<EOF
+## Summary
+- Track linux-packages submission for qrrun ${VERSION_NO_V}
+
+## Release
+- qrrun release tag: ${VERSION}
+- source repo: https://github.com/${SOURCE_REPO}
+
+## Linux Package Repositories
+- repo: https://github.com/${LINUX_PACKAGES_REPO}
+- target branch: ${BRANCH_NAME}
+- pull request: ${pr_url}
+EOF
+}
+
 SOURCE_OWNER="${SOURCE_REPO%%/*}"
 LINUX_PACKAGES_REPO="${LINUX_PACKAGES_REPO:-${SOURCE_OWNER}/linux-packages}"
 PACKAGES_OWNER="${LINUX_PACKAGES_REPO%%/*}"
@@ -173,30 +192,23 @@ git commit -m "Update qrrun Linux packages to ${VERSION}"
 git push --set-upstream origin "${BRANCH_NAME}"
 
 ISSUE_TITLE="Release: update Linux package repositories for qrrun ${VERSION_NO_V}"
+ISSUE_BODY_FILE="${TMP_DIR}/qrrun-linux-release-issue.md"
 EXISTING_ISSUE_NUMBER="$(gh_source issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
 
 if [[ -n "${EXISTING_ISSUE_NUMBER}" && "${EXISTING_ISSUE_NUMBER}" != "null" ]]; then
+  ISSUE_NUMBER="${EXISTING_ISSUE_NUMBER}"
   ISSUE_URL="$(gh_source issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
 else
-  ISSUE_BODY_FILE="${TMP_DIR}/qrrun-linux-release-issue.md"
-  cat >"${ISSUE_BODY_FILE}" <<EOF
-## Summary
-- Track linux-packages submission for qrrun ${VERSION_NO_V}
-
-## Release
-- qrrun release tag: ${VERSION}
-- source repo: https://github.com/${SOURCE_REPO}
-
-## Linux Package Repositories
-- repo: https://github.com/${LINUX_PACKAGES_REPO}
-- target branch: ${BRANCH_NAME}
-EOF
-
+  write_issue_body "${ISSUE_BODY_FILE}" "(pending)"
   ISSUE_URL="$(gh_source issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
+  ISSUE_NUMBER="${ISSUE_URL##*/}"
 fi
 
 EXISTING_PR_NUMBER="$(gh_packages pr list --repo "${LINUX_PACKAGES_REPO}" --head "${PACKAGES_OWNER}:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
 if [[ -n "${EXISTING_PR_NUMBER}" && "${EXISTING_PR_NUMBER}" != "null" ]]; then
+  PR_URL="$(gh_packages pr view --repo "${LINUX_PACKAGES_REPO}" "${EXISTING_PR_NUMBER}" --json url --jq '.url')"
+  write_issue_body "${ISSUE_BODY_FILE}" "${PR_URL}"
+  gh_source issue edit "${ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --body-file "${ISSUE_BODY_FILE}" >/dev/null
   gh_packages pr comment --repo "${LINUX_PACKAGES_REPO}" "${EXISTING_PR_NUMBER}" --body "qrrun tracking issue: ${ISSUE_URL}"
   log "Linux packages PR already exists: #${EXISTING_PR_NUMBER}"
   exit 0
@@ -219,11 +231,14 @@ cat >"${PR_BODY_FILE}" <<EOF
 - key base: https://raw.githubusercontent.com/${LINUX_PACKAGES_REPO}/main/keys
 EOF
 
-gh_packages pr create \
+PR_URL="$(gh_packages pr create \
   --repo "${LINUX_PACKAGES_REPO}" \
   --base "${DEFAULT_BRANCH}" \
   --head "${PACKAGES_OWNER}:${BRANCH_NAME}" \
   --title "Update qrrun Linux packages to ${VERSION}" \
-  --body-file "${PR_BODY_FILE}"
+  --body-file "${PR_BODY_FILE}")"
 
-log "Linux packages PR created successfully"
+write_issue_body "${ISSUE_BODY_FILE}" "${PR_URL}"
+gh_source issue edit "${ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --body-file "${ISSUE_BODY_FILE}" >/dev/null
+
+log "Linux packages PR created successfully: ${PR_URL}"

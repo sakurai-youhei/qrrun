@@ -27,6 +27,25 @@ gh_source() {
   GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh "$@"
 }
 
+write_issue_body() {
+  local output_file="$1"
+  local pr_url="$2"
+
+  cat >"${output_file}" <<EOF
+## Summary
+- Track homebrew-tap submission for qrrun ${VERSION_NO_V}
+
+## Release
+- qrrun release tag: ${VERSION}
+- source repo: https://github.com/${SOURCE_REPO}
+
+## Homebrew Tap
+- tap repo: https://github.com/${HOMEBREW_TAP_REPO}
+- target branch: ${BRANCH_NAME}
+- pull request: ${pr_url}
+EOF
+}
+
 for tool in gh git curl grep; do
   require_tool "${tool}"
 done
@@ -97,30 +116,23 @@ git commit -m "Update qrrun to ${VERSION}"
 git push --set-upstream origin "${BRANCH_NAME}"
 
 ISSUE_TITLE="Release: update Homebrew tap for qrrun ${VERSION_NO_V}"
+ISSUE_BODY_FILE="${TMP_DIR}/qrrun-homebrew-release-issue.md"
 EXISTING_ISSUE_NUMBER="$(gh_source issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
 
 if [[ -n "${EXISTING_ISSUE_NUMBER}" && "${EXISTING_ISSUE_NUMBER}" != "null" ]]; then
+  ISSUE_NUMBER="${EXISTING_ISSUE_NUMBER}"
   ISSUE_URL="$(gh_source issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
 else
-  ISSUE_BODY_FILE="${TMP_DIR}/qrrun-homebrew-release-issue.md"
-  cat >"${ISSUE_BODY_FILE}" <<EOF
-## Summary
-- Track homebrew-tap submission for qrrun ${VERSION_NO_V}
-
-## Release
-- qrrun release tag: ${VERSION}
-- source repo: https://github.com/${SOURCE_REPO}
-
-## Homebrew Tap
-- tap repo: https://github.com/${HOMEBREW_TAP_REPO}
-- target branch: ${BRANCH_NAME}
-EOF
-
+  write_issue_body "${ISSUE_BODY_FILE}" "(pending)"
   ISSUE_URL="$(gh_source issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
+  ISSUE_NUMBER="${ISSUE_URL##*/}"
 fi
 
 EXISTING_PR_NUMBER="$(gh_tap pr list --repo "${HOMEBREW_TAP_REPO}" --head "${TAP_OWNER}:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
 if [[ -n "${EXISTING_PR_NUMBER}" && "${EXISTING_PR_NUMBER}" != "null" ]]; then
+  PR_URL="$(gh_tap pr view --repo "${HOMEBREW_TAP_REPO}" "${EXISTING_PR_NUMBER}" --json url --jq '.url')"
+  write_issue_body "${ISSUE_BODY_FILE}" "${PR_URL}"
+  gh_source issue edit "${ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --body-file "${ISSUE_BODY_FILE}" >/dev/null
   gh_tap pr comment --repo "${HOMEBREW_TAP_REPO}" "${EXISTING_PR_NUMBER}" --body "qrrun tracking issue: ${ISSUE_URL}"
   log "Homebrew tap PR already exists: #${EXISTING_PR_NUMBER}"
   exit 0
@@ -138,11 +150,14 @@ cat >"${PR_BODY_FILE}" <<EOF
 - qrrun issue: ${ISSUE_URL}
 EOF
 
-gh_tap pr create \
+PR_URL="$(gh_tap pr create \
   --repo "${HOMEBREW_TAP_REPO}" \
   --base "${DEFAULT_BRANCH}" \
   --head "${TAP_OWNER}:${BRANCH_NAME}" \
   --title "Update qrrun to ${VERSION}" \
-  --body-file "${PR_BODY_FILE}"
+  --body-file "${PR_BODY_FILE}")"
 
-log "Homebrew tap PR created successfully"
+write_issue_body "${ISSUE_BODY_FILE}" "${PR_URL}"
+gh_source issue edit "${ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --body-file "${ISSUE_BODY_FILE}" >/dev/null
+
+log "Homebrew tap PR created successfully: ${PR_URL}"
