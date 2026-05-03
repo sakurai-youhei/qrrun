@@ -27,6 +27,25 @@ gh_source() {
   GH_TOKEN="${QRRUN_GITHUB_TOKEN}" gh "$@"
 }
 
+write_issue_body() {
+  local output_file="$1"
+  local pr_url="$2"
+
+  cat >"${output_file}" <<EOF
+## Summary
+- Track winget-pkgs submission for ${PACKAGE_IDENTIFIER} ${VERSION_NO_V}
+
+## Release
+- qrrun release tag: ${VERSION}
+- source repo: https://github.com/${SOURCE_REPO}
+
+## winget-pkgs
+- package identifier: ${PACKAGE_IDENTIFIER}
+- target branch: ${BRANCH_NAME}
+- pull request: ${pr_url}
+EOF
+}
+
 for tool in gh git curl sha256sum awk date tr sed; do
   require_tool "${tool}"
 done
@@ -174,30 +193,23 @@ git commit -m "Add ${PACKAGE_IDENTIFIER} version ${VERSION_NO_V}"
 git push --set-upstream origin "${BRANCH_NAME}"
 
 ISSUE_TITLE="Release: submit ${PACKAGE_IDENTIFIER} ${VERSION_NO_V} to winget-pkgs"
+ISSUE_BODY_FILE="${TMP_DIR}/qrrun-winget-release-issue.md"
 EXISTING_ISSUE_NUMBER="$(gh_source issue list --repo "${SOURCE_REPO}" --state open --search "\"${ISSUE_TITLE}\" in:title" --json number --jq '.[0].number')"
 
 if [[ -n "${EXISTING_ISSUE_NUMBER}" && "${EXISTING_ISSUE_NUMBER}" != "null" ]]; then
+  ISSUE_NUMBER="${EXISTING_ISSUE_NUMBER}"
   ISSUE_URL="$(gh_source issue view "${EXISTING_ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --json url --jq '.url')"
 else
-  ISSUE_BODY_FILE="${TMP_DIR}/qrrun-winget-release-issue.md"
-  cat >"${ISSUE_BODY_FILE}" <<EOF
-## Summary
-- Track winget-pkgs submission for ${PACKAGE_IDENTIFIER} ${VERSION_NO_V}
-
-## Release
-- qrrun release tag: ${VERSION}
-- source repo: https://github.com/${SOURCE_REPO}
-
-## winget-pkgs
-- package identifier: ${PACKAGE_IDENTIFIER}
-- target branch: ${BRANCH_NAME}
-EOF
-
+  write_issue_body "${ISSUE_BODY_FILE}" "(pending)"
   ISSUE_URL="$(gh_source issue create --repo "${SOURCE_REPO}" --title "${ISSUE_TITLE}" --body-file "${ISSUE_BODY_FILE}")"
+  ISSUE_NUMBER="${ISSUE_URL##*/}"
 fi
 
 EXISTING_PR_NUMBER="$(gh_winget pr list --repo "${WINGET_UPSTREAM_REPO}" --head "sakurai-youhei:${BRANCH_NAME}" --state open --json number --jq '.[0].number')"
 if [[ -n "${EXISTING_PR_NUMBER}" && "${EXISTING_PR_NUMBER}" != "null" ]]; then
+  PR_URL="$(gh_winget pr view --repo "${WINGET_UPSTREAM_REPO}" "${EXISTING_PR_NUMBER}" --json url --jq '.url')"
+  write_issue_body "${ISSUE_BODY_FILE}" "${PR_URL}"
+  gh_source issue edit "${ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --body-file "${ISSUE_BODY_FILE}" >/dev/null
   log "winget-pkgs PR already exists: #${EXISTING_PR_NUMBER}"
   exit 0
 fi
@@ -214,6 +226,9 @@ NEW_PR_URL="$(gh_winget pr create \
   --head "sakurai-youhei:${BRANCH_NAME}" \
   --title "Add ${PACKAGE_IDENTIFIER} version ${VERSION_NO_V}" \
   --body-file "${PR_TEMPLATE_FILE}")"
+
+write_issue_body "${ISSUE_BODY_FILE}" "${NEW_PR_URL}"
+gh_source issue edit "${ISSUE_NUMBER}" --repo "${SOURCE_REPO}" --body-file "${ISSUE_BODY_FILE}" >/dev/null
 
 NEW_PR_NUMBER="${NEW_PR_URL##*/}"
 if [[ ! "${NEW_PR_NUMBER}" =~ ^[0-9]+$ ]]; then
