@@ -31,8 +31,8 @@ class TestPythonista2(E2EPrintURLBase):
                 def hooked(source, filename, mode, *args, **kwargs):
                     if (
                         mode == "exec"
+                        and filename == "<string>"
                         and isinstance(source, basestring)
-                        and source.startswith("#!/usr/bin/env python2")
                     ):
                         sys.stderr.write(source)
                     return compile(source, filename, mode, *args, **kwargs)
