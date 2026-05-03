@@ -29,10 +29,12 @@ class TestPythonista2(E2EPrintURLBase):
 
             def hook_compile(compile):
                 def hooked(source, filename, mode, *args, **kwargs):
+                    co_filename = sys._getframe(1).f_code.co_filename
                     if (
                         mode == "exec"
                         and filename == "<string>"
                         and isinstance(source, basestring)
+                        and not co_filename.startswith(sys.prefix)
                     ):
                         sys.stderr.write(source)
                     return compile(source, filename, mode, *args, **kwargs)
