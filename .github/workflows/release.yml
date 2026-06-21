@@ -17,7 +17,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -172,7 +172,7 @@ jobs:
             wix_arch: arm64
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v6
@@ -226,7 +226,7 @@ jobs:
     if: needs.guard-main.outputs.on_main == 'true'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download all packaged artifacts
         uses: actions/download-artifact@v8
@@ -264,7 +264,7 @@ jobs:
     if: needs.guard-main.outputs.on_main == 'true' && !contains(needs.guard-main.outputs.version, '-alpha') && !contains(needs.guard-main.outputs.version, '-beta') && !contains(needs.guard-main.outputs.version, '-rc')
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check WINGET_PKGS_PAT
         id: token
@@ -299,7 +299,7 @@ jobs:
     if: needs.guard-main.outputs.on_main == 'true' && !contains(needs.guard-main.outputs.version, '-alpha') && !contains(needs.guard-main.outputs.version, '-beta') && !contains(needs.guard-main.outputs.version, '-rc')
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check HOMEBREW_TAP_PAT
         id: token
@@ -334,7 +334,7 @@ jobs:
     if: needs.guard-main.outputs.on_main == 'true' && !contains(needs.guard-main.outputs.version, '-alpha') && !contains(needs.guard-main.outputs.version, '-beta') && !contains(needs.guard-main.outputs.version, '-rc')
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check LINUX_PACKAGES_PAT
         id: token
